@@ -1,0 +1,839 @@
+/* =====================================================
+   PLANILLA TIPO EXCEL PROFESIONAL
+===================================================== */
+
+/* Contenedor principal: elimina el scroll lateral innecesario */
+.planilla-wrapper {
+    width: 100%;
+    overflow-x: auto; /* Permite scroll solo si es estrictamente necesario */
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 5px;
+}
+
+/* Tabla base compacta */
+.excel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px; /* Fuente más pequeña para ver más datos */
+    table-layout: auto;
+}
+
+/* Celdas generales con menos espacio */
+.excel-table th,
+.excel-table td {
+    padding: 6px 4px; /* Padding reducido al mínimo */
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+/* Header más delgado */
+.excel-table thead th {
+    background: #f8fafc;
+    font-weight: 700;
+    color: #475569;
+    border-bottom: 2px solid #cbd5e1;
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+/* Ajuste de columnas de texto */
+.name-col {
+    text-align: left !important;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.address-col {
+    text-align: left !important;
+    font-size: 10px;
+    color: #64748b;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Inputs más pequeños para que no ensanchen la fila */
+.excel-table input[type="number"], 
+.status-select-mini {
+    width: 100px;
+    height: 24px;
+    font-size: 11px;
+    padding: 0 2px;
+    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    text-align: center;
+}
+
+/* Columna de totales resaltada */
+.total-cell {
+    font-weight: 700;
+    color: #1e293b;
+    background-color: #f1f5f9;
+}
+
+/* Header de acciones más compacto */
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px 15px;
+    background: #fff;
+    border-radius: 10px;
+}
+
+.header-actions h3 {
+    margin: 0;
+    font-size: 16px;
+}
+/* Estilos para la lista de productos dinámica */
+.products-cell {
+    padding: 8px !important;
+    vertical-align: top;
+}
+
+.add-prod-container select {
+    width: 100%;
+    padding: 4px;
+    font-size: 11px;
+    border: 1px dashed #be2b48;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.prod-row-mini {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #f8fafc;
+    padding: 4px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.p-name {
+    flex: 1;
+    font-size: 11px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.p-qty {
+    width: 45px !important;
+    height: 24px !important;
+    font-size: 11px !important;
+}
+
+.p-price {
+    width: 70px !important;
+    height: 24px !important;
+    font-size: 11px !important;
+}
+
+.btn-del-prod {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.btn-del-prod:hover {
+    color: #b91c1c;
+}
+
+.total-cell {
+    font-weight: bold;
+    color: #16a34a;
+    background: #f0fdf4;
+}
+/* Modal Estilos */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 700px;
+    border-radius: 12px;
+    padding: 20px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.modal-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modal-table th {
+    text-align: left;
+    padding: 10px;
+    background: #f8fafc;
+    font-size: 12px;
+}
+
+.modal-table td {
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.stock-badge {
+    color: #be2b48;
+    font-weight: bold;
+}
+
+.qty-selector input {
+    width: 60px;
+    padding: 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.modal-footer {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 2px solid #f1f5f9;
+    padding-top: 15px;
+}
+
+.total-venta-modal span {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.btn-save-modal {
+    background: #be2b48;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-open-sell {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.btn-download-pdf {
+    background: #fff0f0;
+    border: 1px solid #be2b48;
+    color: #be2b48;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+}
+
+.btn-download-pdf:hover {
+    background: #be2b48;
+    color: white;
+}
+
+.btn-confirm-modal {
+    background: #2ecc71;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+/* --- COLORES POR ESTADO --- */
+
+/* VISITADO - VERDE */
+.fila-visitado td:nth-child(1),
+.fila-visitado td:nth-child(2),
+.fila-visitado td:nth-child(3),
+.fila-visitado td:nth-child(4) {
+    background-color: #dcfce7 !important; 
+    color: #166534 !important;
+}
+
+/* PENDIENTE - AMARILLO */
+.fila-pendiente td:nth-child(1),
+.fila-pendiente td:nth-child(2),
+.fila-pendiente td:nth-child(3),
+.fila-pendiente td:nth-child(4) {
+    background-color: #fef9c3 !important;
+    color: #854d0e !important;
+}
+
+/* LLESO - ROJO */
+.fila-lleso td:nth-child(1),
+.fila-lleso td:nth-child(2),
+.fila-lleso td:nth-child(3),
+.fila-lleso td:nth-child(4) {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+}
+
+/* --- BLOQUEO PARA LLESO --- */
+.fila-lleso td {
+    opacity: 0.7;
+}
+
+/* Inhabilitar inputs y botones, pero dejar el select libre */
+.fila-lleso input, 
+.fila-lleso button:not(.btn-download-pdf) {
+    pointer-events: none;
+    background-color: #f1f5f9 !important;
+    opacity: 0.5;
+}
+
+/* El select debe poder usarse para salir del estado LLESO */
+.fila-lleso select {
+    pointer-events: auto !important;
+    background-color: white !important;
+}
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 20px 30px;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 2px solid #f1f5f9;
+    margin-bottom: 0; /* Para que pegue con la tabla */
+}
+
+.header-center {
+    text-align: center;
+}
+
+.ruta-title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ruta-subtitle {
+    margin: 4px 0 0 0;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+/* Botón Volver */
+.btn-back-list {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-back-list:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* Botón Guardar */
+.btn-confirm-all {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1e293b; /* Color oscuro profesional */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.btn-confirm-all:hover {
+    background: #0f172a;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15);
+}
+.ruta-subtitle {
+    margin: 4px 0 0 0;
+    font-size: 0.85rem; /* Un poco más grande para legibilidad */
+    color: #475569;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-transform: capitalize; /* Para que el día empiece en mayúscula */
+}
+
+.ruta-subtitle svg {
+    color: #be2b48; /* Color de énfasis para el ícono del reloj */
+}
+
+.capitalize {
+    text-transform: capitalize;
+}
+
+/* Estilo adicional para que el título destaque más */
+.ruta-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+}
+.btn-add-customer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #10b981; /* Verde esmeralda */
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-right: 10px; /* Separación del botón Guardar */
+    transition: 0.2s;
+}
+
+.btn-add-customer:hover {
+    background: #059669;
+}
+
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.customer-modal {
+    max-width: 450px !important;
+}
+/* Contenedor de días: Estilo Moderno */
+.dias-selector-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.btn-dia {
+    padding: 10px 20px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 50px; /* Redondos */
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-dia:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.btn-dia.selected {
+    background: #be2b48; /* Tu color guinda/rojo */
+    color: white;
+    border-color: #be2b48;
+    box-shadow: 0 4px 12px rgba(190, 43, 72, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Tabla de Rutas */
+.table-wrapper {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.ventas-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ventas-table th {
+    background: #f8fafc;
+    padding: 15px;
+    text-align: left;
+    color: #475569;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #edf2f7;
+}
+
+.ventas-table td {
+    padding: 15px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+}
+
+.ventas-table tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Badge de Estado (opcional si traes el estado de la orden) */
+.badge-status {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.status-pendiente { background: #fef3c7; color: #92400e; }
+
+
+.filters-container {
+    display: flex;
+    gap: 80px;
+    background: #f8fafc;
+    padding: 15px 0px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+    align-items: flex-end;
+}
+
+.search-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+}
+
+.search-group label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+}
+
+.input-search {
+    padding: 10px 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.input-search:focus {
+    border-color: #be2b48;
+    box-shadow: 0 0 0 3px rgba(190, 43, 72, 0.1);
+}
+
+.no-data {
+    text-align: center;
+    padding: 50px !important;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.id-cell {
+    font-weight: 800;
+    color: #be2b48;
+}
+
+.amount-cell {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+/* Badge de estados */
+.badge-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.badge-status.pendiente { background: #fff7ed; color: #9a3412; border: 1px solid #ffedd5; }
+.badge-status.pagado { background: #f0fdf4; color: #166534; border: 1px solid #dcfce7; }
+
+/* Contenedor principal de la sección de filtros */
+.filters-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px; /* Más espacio interno */
+    margin: 20px 0;
+    border: 1px solid #e2e8f0;
+}
+
+/* Forzamos que los elementos NO se peguen */
+.filters-grid {
+    display: flex;
+    flex-wrap: wrap;
+    /* 50px de separación real entre cada buscador */
+    gap: 50px; 
+    align-items: flex-end;
+    justify-content: flex-start;
+}
+
+/* Grupo individual: Label + Input */
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Espacio entre el texto de arriba y el cuadro de texto */
+    width: 280px; /* Ancho fijo para que no se peguen ni se estiren */
+}
+
+/* Estilo del Input mejorado */
+.filter-input {
+    height: 45px;
+    padding: 0 15px;
+    background: #ffffff; /* Fondo blanco para que resalte del gris */
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    color: #1e293b;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03); /* Sombra muy suave */
+    transition: all 0.3s ease;
+}
+
+.filter-input:focus {
+    border-color: #be2b48;
+    box-shadow: 0 0 0 4px rgba(190, 43, 72, 0.15);
+    outline: none;
+    transform: translateY(-1px); /* Efecto de elevación al hacer clic */
+}
+
+/* Etiquetas más elegantes */
+.filter-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #475569;
+    letter-spacing: 0.5px;
+}
+/* Estilo del Botón Limpiar Filtros */
+.btn-clear-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #fff1f2; /* Un rojo muy tenue de fondo */
+    color: #be2b48; /* Tu color guinda/rojo principal */
+    border: 1.5px solid #fecdd3;
+    padding: 0 20px;
+    height: 48px; /* Misma altura que tus inputs para que queden alineados */
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-clear-filters:hover {
+    background-color: #be2b48; /* Se vuelve sólido al pasar el mouse */
+    color: white;
+    border-color: #be2b48;
+    box-shadow: 0 4px 12px rgba(190, 43, 72, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-clear-filters:active {
+    transform: translateY(0);
+}
+
+/* Opcional: Si quieres que aparezca con una pequeña animación */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.btn-clear-filters {
+    animation: fadeIn 0.3s ease-out;
+}
+/* Espaciado y Diseño del Modal Moderno */
+.modal-ventas-xl {
+    width: 95%;
+    max-width: 900px;
+    padding: 40px !important; /* Más espacio interno */
+    border-radius: 20px !important;
+}
+
+/* Encabezado separado */
+.header-info h3 {
+    margin-bottom: 15px;
+    font-size: 1.6rem;
+    color: #1e293b;
+}
+
+.client-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 12px;
+    border-left: 4px solid #be2b48;
+}
+
+/* Tabla con filas espaciadas */
+.modal-table-modern {
+    width: 100%;
+    border-spacing: 0 12px; /* Espacio vertical entre filas */
+    border-collapse: separate;
+    margin: 25px 0;
+}
+
+.modal-table-modern th {
+    padding: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+}
+
+.modal-table-modern td {
+    background: #ffffff;
+    padding: 18px 12px;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.modal-table-modern td:first-child { border-left: 1px solid #f1f5f9; border-radius: 12px 0 0 12px; }
+.modal-table-modern td:last-child { border-right: 1px solid #f1f5f9; border-radius: 0 12px 12px 0; }
+
+/* Inputs Modernos y Grandes */
+.input-modern {
+    height: 45px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.2s;
+    width: 100px;
+}
+
+.input-modern:focus {
+    border-color: #be2b48;
+    box-shadow: 0 0 0 4px rgba(190, 43, 72, 0.1);
+    outline: none;
+}
+
+/* Footer separado */
+.modal-footer-modern {
+    margin-top: 30px;
+    padding-top: 25px;
+    border-top: 2px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.total-amount {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #be2b48;
+    margin-left: 15px;
+}
+
+.btn-confirm-final {
+    background: #be2b48;
+    color: white;
+    padding: 15px 35px;
+    border-radius: 12px;
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 10px 15px -3px rgba(190, 43, 72, 0.3);
+}
+/* Resaltar fila con productos seleccionados */
+.modal-table-modern tr.row-active td {
+    background-color: #fff1f2 !important; /* Un rojo muy suave */
+    border-top: 1px solid #fecdd3;
+    border-bottom: 1px solid #fecdd3;
+}
+
+.subtotal-cell.active-amount {
+    color: #be2b48;
+    font-weight: 800;
+}
+
+/* Evitar flechas en inputs de tipo número para un look más limpio */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.input-search-planilla {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 200px;
+    margin-right: 10px;
+}
+
+.input-search-planilla:focus {
+    outline: none;
+    border-color: #be2b48;
+    box-shadow: 0 0 0 2px rgba(190, 43, 72, 0.1);
+}

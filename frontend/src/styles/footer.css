@@ -1,0 +1,58 @@
+/* FOOTER GLOBAL - Mayorista Gallego */
+/* En footer.css */
+.main-footer {
+    background: #2d3436;
+    color: var(--white);
+    padding: 25px 5%;
+    width: 100%;
+    margin: 0; /* Asegúrate de que no haya margen */
+    border: none; /* Quita cualquier border-top */
+    outline: 1px solid #2d3436; /* Truco: un outline del mismo color "pisa" cualquier hueco */
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.footer-info p {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    margin: 0;
+}
+
+.footer-links {
+    display: flex;
+    gap: 20px;
+}
+
+.footer-links span {
+    color: var(--white);
+    font-size: 0.8rem;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.footer-links span:hover {
+    opacity: 1;
+    color: var(--accent-color); /* El dorado que definimos en app.css */
+}
+
+/* Ajuste para pantallas pequeñas */
+@media (max-width: 768px) {
+    .footer-container {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .footer-links {
+        justify-content: center;
+    }
+}

@@ -1,0 +1,147 @@
+/* Eliminamos el reset (*) y body porque ya deben estar en app.css */
+
+.login-page {
+    display: flex;
+    flex-direction: column;
+    /* Asegura que siempre ocupe el alto total de la ventana, sin importar el zoom */
+    min-height: 100vh; 
+    width: 100%;
+    background-color: var(--white);
+}
+
+.main-container {
+    display: flex;
+    flex: 1; /* Esto empuja al footer hacia abajo automáticamente */
+    width: 100%;
+}
+
+/* -------------------------------------------------------------- */
+/* IZQUIERDA: Estilo Impactante */
+.left-section {
+    flex: 1.2;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    min-height: 400px; /* Evita que colapse con mucho zoom */
+}
+
+.overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    /* Usamos la variable --primary-color para consistencia */
+    background: linear-gradient(135deg, rgba(155, 17, 30, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+.left-content {
+    position: relative;
+    z-index: 2;
+    color: var(--white);
+    max-width: 500px;
+}
+
+.floating-icon {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: var(--accent-color); /* Usamos variable */
+    animation: float 4s ease-in-out infinite;
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.floating-icon:hover {
+    transform: scale(1.1) rotate(5deg);
+    color: var(--white);
+}
+
+.divider {
+    width: 60px;
+    height: 4px;
+    background: var(--accent-color);
+    margin: 25px 0;
+}
+
+.left-content h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.left-content h1 span {
+    color: var(--accent-color);
+}
+
+/* --------------------------------------------------------------------------------- */
+/* DERECHA: Formulario */
+.login-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    background-color: var(--white);
+}
+
+.login-container {
+    background: var(--white);
+    padding: 50px;
+    border-radius: var(--radius-lg); /* Usamos variable global */
+    box-shadow: var(--shadow-soft);  /* Usamos variable global */
+    width: 100%;
+    max-width: 450px;
+}
+
+.brand-header {
+    text-align: center;
+    margin-bottom: 35px;
+}
+
+.login-logo {
+    width: 120px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+/* --------------------------------------------------------------------------------- */
+/* Inputs (Simplificados) */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+select, input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--text-muted);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+select:focus, input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(155, 17, 30, 0.1);
+}
+
+/* Eliminamos .btn-login porque ahora usas .btn y .btn-primary de app.css */
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+    .main-container { flex-direction: column; }
+    .left-section { height: 300px; padding: 30px; }
+    .left-content h1 { font-size: 2.2rem; }
+    .left-content p { display: none; } /* Ocultamos descripción en móvil para ahorrar espacio */
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+}
