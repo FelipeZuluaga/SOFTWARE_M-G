@@ -1,0 +1,117 @@
+:root {
+    /* Paleta de Colores Corporativa */
+    --primary-color: #9b111e;      /* Rojo Gallego */
+    --primary-hover: #7a0d18;
+    --accent-color: #ffda79;       /* Dorado de resalte */
+    --white: #ffffff;
+    --bg-gray: #f8f9fa;            /* Gris claro para el fondo de la app */
+    
+    /* Colores de Texto */
+    --text-dark: #2d3436;          /* Títulos y textos importantes */
+    --text-light: #636e72;         /* Subtítulos y descripciones */
+    --text-muted: #dfe6e9;
+
+    /* Sistema de Formas y Sombras */
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.08);
+    --radius-lg: 20px;             /* Para tarjetas y contenedores grandes */
+    --radius-md: 10px;             /* Para botones, inputs y menús */
+    
+    /* Tipografía */
+    --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05); /* Sombra más sutil */
+}
+/* ESTILOS GLOBALES */
+.admin-container {
+    flex: 1;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px; /* Evita que el contenido toque los bordes del móvil */
+    box-sizing: border-box; /* Fundamental para que el padding no rompa el ancho */
+}
+/* Botón Base - Estilos comunes */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-family: var(--font-main);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    font-size: 0.95rem;
+    text-decoration: none;
+}
+
+/* Modificador Primario (Rojo Gallego) */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--white) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(155, 17, 30, 0.2);
+}
+
+/* Modificador Secundario / Cancelar */
+.btn-secondary {
+    background-color: #f1f5f9;
+    color: var(--text-light);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background-color: #e2e8f0;
+    color: var(--text-dark);
+}
+
+/* Estado Deshabilitado */
+.btn:disabled {
+    background-color: #ccc !important;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+/* El menú tipo "píldora" */
+.header-nav-menu {
+    display: flex;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.1);
+    padding: 8px 15px;
+    border-radius: 50px;
+}
+.admin-header {
+    background: var(--primary-color);
+    padding: 15px 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    color: var(--white);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+/* mainLayout.css - Solo estructura */
+.layout-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+/* Agrega esto al final de app.css */
+html, body {
+    overflow-x: hidden; /* Evita el scroll horizontal molesto en móviles */
+    width: 100%;
+    background-color: #2d3436; /* El mismo color exacto de tu footer */
+    background-color: var(--bg-gray);
+    margin: 0;
+}
+/* app.css */
+a, .nav-item, .admin-card-link {
+    text-decoration: none !important;
+}

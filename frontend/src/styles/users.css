@@ -1,0 +1,114 @@
+/* users.css */
+.users-layout {
+    display: grid;
+    grid-template-columns: 350px 1fr; /* Panel izquierdo para crear, derecho para lista */
+    gap: 30px;
+    align-items: start;
+}
+
+/* Panel del Formulario */
+.user-form-card {
+    background: var(--white);
+    padding: 30px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    position: sticky;
+    top: 100px;
+}
+
+.user-form-card h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+/* Tabla de Usuarios */
+.users-table-container {
+    background: var(--white);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+}
+
+.mg-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.mg-table th {
+    background: #f8fafc;
+    color: var(--text-light);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 15px;
+    text-align: left;
+    border-bottom: 2px solid var(--bg-gray);
+}
+
+.mg-table td {
+    padding: 15px;
+    border-bottom: 1px solid var(--bg-gray);
+    font-size: 0.9rem;
+    color: var(--text-dark);
+}
+
+.role-badge {
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(155, 17, 30, 0.1);
+    color: var(--primary-color);
+}
+
+.btn-icon-delete {
+    background: none;
+    border: none;
+    color: #ff7675;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-icon-delete:hover {
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .users-layout {
+        grid-template-columns: 1fr;
+    }
+    .user-form-card {
+        position: static;
+    }
+}
+.user-form-card input,
+.user-form-card select {
+    width: 100%; /* Ocupa todo el ancho disponible */
+    box-sizing: border-box; /* Crucial: incluye el padding en el ancho total */
+    padding: 12px 15px;
+    border: 1px solid var(--text-muted);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    background-color: #fdfdfd;
+    transition: all 0.2s ease;
+    color: var(--text-dark);
+}
+.user-form-card input:focus, 
+.user-form-card select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(155, 17, 30, 0.1);
+    background-color: var(--white);
+}
+/* Ajuste para que los grupos de formulario no se amontonen */
+.form-group {
+    margin-bottom: 15px;
+    width: 100%;
+}

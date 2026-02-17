@@ -1,0 +1,118 @@
+/* ESTRUCTURA PRINCIPAL */
+.layout-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* HEADER CONFIGURACIÓN */
+.admin-header {
+    background: var(--primary-color);
+    padding: 15px 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    color: var(--white);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-logo-img {
+    width: 50px; 
+    height: 50px;
+    object-fit: contain;
+    background: var(--white);
+    border-radius: 50%;
+    padding: 5px;
+}
+
+/* NAVEGACIÓN (Píldora) */
+.header-nav-menu {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.15);
+    padding: 8px 15px;
+    border-radius: 50px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+
+.nav-item:hover, .nav-item.active {
+    background: var(--white);
+    color: var(--primary-color);
+}
+
+/* PERFIL DE USUARIO (DERECHA) */
+.user-profile-section {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.user-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--white);
+}
+
+.user-role {
+    font-size: 0.7rem;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.user-avatar {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* CONTENEDOR DE CONTENIDO */
+.admin-container {
+    flex: 1; /* Esto asegura que el footer siempre baje */
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .admin-header {
+        flex-direction: column;
+        gap: 15px;
+        padding: 20px;
+    }
+    
+    .header-nav-menu {
+        width: 100%;
+        overflow-x: auto; /* Scroll lateral en menú móvil */
+        justify-content: flex-start;
+    }
+}
