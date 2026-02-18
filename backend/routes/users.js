@@ -17,7 +17,7 @@ const isAdmin = (req, res, next) => {
 ========================= */
 router.get("/", isAdmin, async (req, res) => {
     const sql = `
-        SELECT u.id, u.name, u.email, r.name AS role
+        SELECT u.id, u.name, r.name AS role
         FROM users u
         JOIN roles r ON u.role_id = r.id
         ORDER BY u.id DESC
@@ -37,9 +37,9 @@ router.get("/", isAdmin, async (req, res) => {
    CREAR USUARIO (Async/Await)
 ========================= */
 router.post("/", isAdmin, async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { id, name, password, role } = req.body;
 
-    if (!name || !email || !password || !role) {
+    if (!id || !name || !password || !role) {
         return res.status(400).json({ message: "Datos incompletos" });
     }
 
@@ -56,17 +56,17 @@ router.post("/", isAdmin, async (req, res) => {
 
         // 2️⃣ Insertar usuario
         const insertSql = `
-            INSERT INTO users (name, email, password_hash, role_id)
+            INSERT INTO users (id, name, password_hash, role_id)
             VALUES (?, ?, ?, ?)
         `;
 
-        await db.query(insertSql, [name, email, password, role_id]);
+        await db.query(insertSql, [id, name,  password, role_id]);
         res.json({ message: "Usuario creado correctamente" });
 
     } catch (err) {
         console.error(err);
         if (err.code === "ER_DUP_ENTRY") {
-            return res.status(400).json({ message: "Este correo ya está registrado" });
+            return res.status(400).json({ message: "Este código de usuario ya está registrado" });
         }
         res.status(500).json({ message: "Error al insertar usuario" });
     }
