@@ -162,8 +162,20 @@ export default function VentasPage() {
     const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().getDay());
 
 
+    // ESTADOS PARA EL MODAL DE REGISTRO DE CLIENTES
     const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
-    const [newCustomer, setNewCustomer] = useState({ name: "", address: "", phone: "", afterCustomerId: "" });
+    const [newCustomer, setNewCustomer] = useState({
+        name: "",
+        address: "",
+        phone: "",
+        afterCustomerId: "", // Para saber detrás de quién va
+        visit_day: "Lunes",
+        seller_id: "" // Solo lo usará el Admin
+    });
+
+
+
+
 
     const [filterID, setFilterID] = useState("");
     const [filterVendedor, setFilterVendedor] = useState("");
@@ -203,7 +215,7 @@ export default function VentasPage() {
                 setPlanilla(JSON.parse(guardado));
             } else {
                 // Si no hay nada guardado, cargamos de la API como antes
-                const clientesBase = await customerService.getBalances();
+                const clientesBase = await customerService.getCustomersWithBalance();
                 const inicializarPlanilla = clientesBase.map(c => ({
                     id: c.id,
                     address: c.customer_address || "",
@@ -389,53 +401,35 @@ export default function VentasPage() {
         }
         finally { setLoading(false); }
     };
-    const handleAddCustomer = async (e) => { // Agregamos async
+    const handleAddCustomer = async (e) => {
         e.preventDefault();
-
         try {
             setLoading(true);
-            // 1. Guardar en Base de Datos primero
-            const savedCustomer = await customerService.createCustomer({
-                name: newCustomer.name,
-                address: newCustomer.address,
-                phone: newCustomer.phone
+
+            // Buscamos la posición del cliente seleccionado
+            const indexRef = planilla.findIndex(c => String(c.id) === String(newCustomer.afterCustomerId));
+            // Si no selecciona nadie, va al final (indexRef + 1 = planilla.length)
+            const nuevaPosicion = indexRef !== -1 ? indexRef + 2 : planilla.length + 1;
+
+            const response = await customerService.createCustomer({
+                ...newCustomer,
+                position: nuevaPosicion
             });
 
-            // 2. Mapear la respuesta al formato que usa tu planilla
-            const nuevoRegistro = {
-                id: savedCustomer.id, // El ID real de la DB
-                address: savedCustomer.address,
-                name: savedCustomer.name,
-                phone: savedCustomer.phone,
-                status: "VISITADO",
-                deuda_previa: 0,
-                pago_compra: "",
-                abono_deuda: "",
-                productos: {},
-                facturaBlob: null
-            };
-
-            // 3. Mantener tu lógica de posicionamiento intacta
-            if (newCustomer.afterCustomerId === "") {
-                setPlanilla([...planilla, nuevoRegistro]);
-            } else {
-                const index = planilla.findIndex(c => c.id == newCustomer.afterCustomerId);
-                const nuevaLista = [...planilla];
-                nuevaLista.splice(index + 1, 0, nuevoRegistro);
-                setPlanilla(nuevaLista);
+            if (response.success) {
+                // Refrescar la planilla desde el server para asegurar que las posiciones 
+                // de TODOS los clientes se actualizaron correctamente
+                fetchPlanilla();
+                alertSuccess("Éxito", "Cliente guardado y posición actualizada.");
+                setShowAddCustomerModal(false);
+                setNewCustomer({ name: "", address: "", phone: "", afterCustomerId: "", visit_day: "Lunes", seller_id: "" });
             }
-
-            alertSuccess("Éxito", "Cliente guardado en base de datos y agregado a la ruta.");
-            setShowAddCustomerModal(false);
-            setNewCustomer({ name: "", address: "", phone: "", afterCustomerId: "" });
-
         } catch (err) {
-            alertError("Error", "No se pudo guardar el cliente en la base de datos.");
+            alertError("Error", "No se pudo guardar.");
         } finally {
             setLoading(false);
         }
     };
-
     // --- FUNCIONES DE CONTROL DE MODAL PRODUCTOS ---
 
     // 1. Manejar cantidad con bloqueo de Stock Máximo
@@ -594,6 +588,15 @@ export default function VentasPage() {
                             <form onSubmit={handleAddCustomer}>
                                 <div className="modal-body">
                                     <div className="form-group">
+
+                                        {/* SOLO ADMIN ve el ID del vendedor */}
+                                        {user.role === 'ADMINISTRADOR' && (
+                                            <input
+                                                type="number"
+                                                placeholder="ID del Vendedor asignado"
+                                                onChange={e => setNewCustomer({ ...newCustomer, seller_id: e.target.value })}
+                                            />
+                                        )}
                                         <label>Nombre Completo</label>
                                         <input
                                             required
@@ -603,6 +606,17 @@ export default function VentasPage() {
                                             onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
                                         />
                                     </div>
+                                    {/* Selector de Día */}
+                                    <select value={newCustomer.visit_day} onChange={e => setNewCustomer({ ...newCustomer, visit_day: e.target.value })}>
+                                        <option value="Lunes">Lunes</option>
+                                        <option value="Martes">Martes</option>
+                                        <option value="Miércoles">Miércoles</option>
+                                        <option value="Jueves">Jueves</option>
+                                        <option value="Viernes">Viernes</option>
+                                        <option value="Sábado">Sábado</option>
+                                        <option value="Domingo">Domingo</option>
+                                        {/* ... demás días */}
+                                    </select>
                                     <div className="form-group">
                                         <label>Dirección</label>
                                         <input
@@ -623,19 +637,11 @@ export default function VentasPage() {
                                         />
                                     </div>
                                 </div>
-                                <label>Ubicación en la ruta (Insertar después de:)</label>
-                                <select
-                                    className="form-control"
-                                    value={newCustomer.afterCustomerId}
-                                    onChange={(e) => setNewCustomer({ ...newCustomer, afterCustomerId: e.target.value })}
-                                >
-                                    <option value="">-- Al final de la lista --</option>
-                                    {planilla.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            Después de: {c.name}
-                                        </option>
-                                    ))}
+                                <select onChange={e => setNewCustomer({ ...newCustomer, afterCustomerId: e.target.value })}>
+                                    <option value="">-- Al final --</option>
+                                    {planilla.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
+
                                 <div className="modal-footer">
                                     <button type="button" className="btn-cancel" onClick={() => setShowAddCustomerModal(false)}>Cancelar</button>
                                     <button type="submit" className="btn-confirm-modal">Agregar a la Tabla</button>
