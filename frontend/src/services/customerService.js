@@ -1,26 +1,26 @@
 import api from "./api";
 
 export const customerService = {
-    /**
-     * Obtiene la lista de clientes con sus deudas acumuladas
-     */
-    getBalances: async () => {
+
+    getBalances: async (sellerId) => {
         try {
-            const response = await api.get("/customers/balances");
-            return response.data.data; // Retorna el array de clientes con saldos
+            // Pasamos el sellerId como query param
+            const response = await api.get(`/customers/balances?seller_id=${sellerId}`);
+            return response.data.data;
         } catch (error) {
-            console.error("Error en customerService:", error);
             throw error;
         }
     },
-    // Nueva función
     createCustomer: async (customerData) => {
         try {
+            // Asegúrate de que tu ruta en el backend coincida con "/customers/create"
             const response = await api.post("/customers/create", customerData);
-            return response.data.data; 
+            return response.data.data;
         } catch (error) {
-            console.error("Error al crear cliente:", error);
-            throw error;
+            // Manejo de errores más descriptivo
+            const message = error.response?.data?.message || "Error al conectar con el servidor";
+            console.error("Error al crear cliente:", message);
+            throw new Error(message);
         }
     }
 };

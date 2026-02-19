@@ -9,11 +9,8 @@ import {
     Save,
     ShoppingCart,
     X,
-    Info,
     FileText, // <--- Agrega esta línea aquí
     UserPlus,    // <--- Agregado
-    ChevronUp,   // <--- Agregado
-    ChevronDown  // <--- Agregado
 } from "lucide-react";
 import "../styles/ventas.css";
 import jsPDF from "jspdf";
@@ -79,6 +76,7 @@ const ModalProductos = ({
                         <tbody>
                             {/* USAMOS LA LISTA FILTRADA */}
                             {productosFiltrados.map((item) => {
+
                                 const cant = cliente.productos[item.product_id] || 0;
                                 const precioVenta = cliente.preciosPersonalizados?.[item.product_id] ?? "";
                                 const stockDisponible = item.quantity;
@@ -152,16 +150,12 @@ export default function VentasPage() {
     const [orderItems, setOrderItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [planilla, setPlanilla] = useState([]);
-
     // Estados para la Modal
     const [showModal, setShowModal] = useState(false);
     const [clienteActualIdx, setClienteActualIdx] = useState(null);
-
     const user = JSON.parse(localStorage.getItem("user"));
     const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().getDay());
-
-
     // ESTADOS PARA EL MODAL DE REGISTRO DE CLIENTES
     const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
     const [newCustomer, setNewCustomer] = useState({
@@ -172,19 +166,11 @@ export default function VentasPage() {
         visit_day: "Lunes",
         seller_id: "" // Solo lo usará el Admin
     });
-
-
-
-
-
     const [filterID, setFilterID] = useState("");
     const [filterVendedor, setFilterVendedor] = useState("");
-
     const [searchTerm, setSearchTerm] = useState("");
-
     const navigate = useNavigate(); // Inicializar el hook
     useEffect(() => { loadPendingOrders(); }, []);
-
 
     const loadPendingOrders = async () => {
         try {
@@ -204,34 +190,40 @@ export default function VentasPage() {
     const handleSelectOrder = async (order) => {
         try {
             setLoading(true);
+            // 1. Obtener productos del camión para esta orden
             const items = await orderService.getOrderDetail(order.id);
             setSelectedOrder(order);
             setOrderItems(items);
 
-            // INTENTAR CARGAR DESDE LOCALSTORAGE
+            // 2. Intentar cargar progreso guardado de LocalStorage
             const guardado = localStorage.getItem(`planilla_${order.id}`);
 
             if (guardado) {
                 setPlanilla(JSON.parse(guardado));
             } else {
-                // Si no hay nada guardado, cargamos de la API como antes
-                const clientesBase = await customerService.getCustomersWithBalance();
+                // 3. Si no hay guardado, cargar clientes desde la API
+                // Usamos el ID del usuario actual para filtrar por su ruta
+                const clientesBase = await customerService.getBalances(user.id);
+
                 const inicializarPlanilla = clientesBase.map(c => ({
                     id: c.id,
-                    address: c.customer_address || "",
-                    name: c.customer_name,
+                    name: c.name || c.customer_name,
+                    address: c.address || c.customer_address || "",
                     phone: c.phone || "",
-                    status: "",
+                    visit_status: "",
                     deuda_previa: Number(c.total_debt || 0),
-                    pago_compra: "",
-                    abono_deuda: "",
+                    venta_hoy: 0,
                     productos: {},
+                    preciosPersonalizados: {},
                     facturaBlob: null
                 }));
+
+
                 setPlanilla(inicializarPlanilla);
             }
         } catch (err) {
-            alertError("Error", "No se pudo cargar la ruta.");
+            console.error("Error al seleccionar orden:", err);
+            alertError("Error", "No se pudo cargar la planilla de clientes.");
         } finally {
             setLoading(false);
         }
@@ -257,23 +249,28 @@ export default function VentasPage() {
         setPlanilla(nuevaPlanilla);
     };
 
-    // --- LÓGICA DE CÁLCULO CORREGIDA (PUNTO CRÍTICO) ---
     const calcularTotalFila = (cliente) => {
-        if (!cliente) return 0;
+        // 1. Verificación de seguridad
+        if (!cliente || !cliente.productos) return 0;
+
         return Object.entries(cliente.productos).reduce((sum, [prodId, cant]) => {
-            const item = orderItems.find(i => i.product_id === parseInt(prodId));
+            // 2. Convertir cant a número para evitar errores de string
+            const cantidad = Number(cant) || 0;
+            if (cantidad <= 0) return sum;
 
-            // CORRECCIÓN: Primero busca si hay un precio manual en 'preciosPersonalizados'
-            // Si no existe o está vacío, usa el unit_price base del item.
+            // 3. Buscar el producto en la carga del camión (orderItems)
+            const item = orderItems.find(i => String(i.product_id) === String(prodId));
+
+            // 4. Lógica de Precio: Manual vs Base
             const precioManual = cliente.preciosPersonalizados?.[prodId];
-            const precioEfectivo = (precioManual !== undefined && precioManual !== "")
+            const precioEfectivo = (precioManual !== undefined && precioManual !== "" && precioManual !== null)
                 ? Number(precioManual)
-                : (item?.unit_price || 0);
+                : (Number(item?.unit_price) || 0);
 
-            return sum + (cant * precioEfectivo);
+            return sum + (cantidad * precioEfectivo);
         }, 0);
     };
-
+    //--------------------------------------------------------------------------------------------------------------------------------------------
     const updateCelda = (idx, campo, valor) => {
         const nuevaPlanilla = [...planilla];
         const cliente = nuevaPlanilla[idx];
@@ -281,10 +278,10 @@ export default function VentasPage() {
         cliente[campo] = valor;
 
         // Lógica para estado LLESO
-        if (campo === "status" && valor === "LLESO") {
+        if (campo === "visit_status" && valor === "LLESO") {
             const totalVentaHoy = calcularTotalFila(cliente);
             const nuevoSaldo = (cliente.deuda_previa + totalVentaHoy) -
-                (Number(cliente.pago_compra) + Number(cliente.abono_deuda));
+                (Number(cliente.amount_paid) + Number(cliente.credit_amount));
 
             // REGLA: Si es LLESO y no debe nada, se elimina de la planilla
             if (nuevoSaldo <= 0) {
@@ -293,7 +290,7 @@ export default function VentasPage() {
                     setPlanilla(nuevaPlanilla);
                     return;
                 } else {
-                    cliente.status = "PENDIENTE"; // Revertir si cancela
+                    cliente.visit_status = "PENDIENTE"; // Revertir si cancela
                 }
             }
             // Si DEBE, el cliente se queda en la lista con estado LLESO (bloqueado por CSS)
@@ -301,7 +298,7 @@ export default function VentasPage() {
 
         setPlanilla(nuevaPlanilla);
     };
-
+    //--------------------------------------------------------------------------------------------------------------------------------------------
     const ordenesFiltradas = useMemo(() => {
         return pendingOrders.filter(order => {
             if (!order.created_at) return false;
@@ -324,7 +321,7 @@ export default function VentasPage() {
             return coincideDia && coincideID && coincideVendedor;
         });
     }, [pendingOrders, diaSeleccionado, filterID, filterVendedor]); // Agregamos las dependencias aquí
-
+    //--------------------------------------------------------------------------------------------------------------------------------------------
     const handleConfirmarTodo = async () => {
         const ventasRealizadas = planilla.filter(c =>
             Object.keys(c.productos).length > 0 || c.abono_deuda > 0 || c.status !== "PENDIENTE"
@@ -337,7 +334,7 @@ export default function VentasPage() {
             const payload = {
                 order_id: selectedOrder.id,
                 sales: ventasRealizadas.map(v => ({
-                    customers_id: v.id,
+                    customer_id: v.id,
                     customer_address: v.address,
                     customer_name: v.name,
                     customer_phone: v.phone,
@@ -401,37 +398,8 @@ export default function VentasPage() {
         }
         finally { setLoading(false); }
     };
-    const handleAddCustomer = async (e) => {
-        e.preventDefault();
-        try {
-            setLoading(true);
-
-            // Buscamos la posición del cliente seleccionado
-            const indexRef = planilla.findIndex(c => String(c.id) === String(newCustomer.afterCustomerId));
-            // Si no selecciona nadie, va al final (indexRef + 1 = planilla.length)
-            const nuevaPosicion = indexRef !== -1 ? indexRef + 2 : planilla.length + 1;
-
-            const response = await customerService.createCustomer({
-                ...newCustomer,
-                position: nuevaPosicion
-            });
-
-            if (response.success) {
-                // Refrescar la planilla desde el server para asegurar que las posiciones 
-                // de TODOS los clientes se actualizaron correctamente
-                fetchPlanilla();
-                alertSuccess("Éxito", "Cliente guardado y posición actualizada.");
-                setShowAddCustomerModal(false);
-                setNewCustomer({ name: "", address: "", phone: "", afterCustomerId: "", visit_day: "Lunes", seller_id: "" });
-            }
-        } catch (err) {
-            alertError("Error", "No se pudo guardar.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    //--------------------------------------------------------------------------------------------------------------------------------------------
     // --- FUNCIONES DE CONTROL DE MODAL PRODUCTOS ---
-
     // 1. Manejar cantidad con bloqueo de Stock Máximo
     const handleCantidadChange = (productId, valor, stockDisponible) => {
         const numValue = parseInt(valor) || 0;
@@ -442,7 +410,7 @@ export default function VentasPage() {
         }
         updateCantidadVenta(productId, numValue);
     };
-
+    //--------------------------------------------------------------------------------------------------------------------------------------------
     // --- ACTUALIZACIÓN DE PRECIO CORREGIDA ---
     const updatePrecioVenta = (productId, nuevoPrecio) => {
         const nuevaPlanilla = [...planilla];
@@ -455,7 +423,7 @@ export default function VentasPage() {
         nuevaPlanilla[clienteActualIdx].preciosPersonalizados[productId] = nuevoPrecio;
         setPlanilla(nuevaPlanilla);
     };
-
+    //--------------------------------------------------------------------------------------------------------------------------------------------
     // --- FUNCIÓN PARA GENERAR EL PDF (ADAPTADA A PRECIOS EDITABLES) ---
     const generarPDFVenta = (cliente) => {
         const doc = new jsPDF();
@@ -513,6 +481,7 @@ export default function VentasPage() {
 
         return doc.output('blob');
     };
+    //--------------------------------------------------------------------------------------------------------------------------------------------
     const confirmarVentaModal = () => {
         // 1. Obtener los datos actuales del cliente y la venta
         const cliente = planilla[clienteActualIdx];
@@ -559,6 +528,84 @@ export default function VentasPage() {
         // 4. Cerrar el modal
         setShowModal(false);
     };
+    const fetchPlanilla = async () => {
+        try {
+            setLoading(true);
+            // Usamos el ID del vendedor logueado para traer su ruta
+            const data = await customerService.getBalances(user.id);
+            // ORDENAMOS POR POSITION
+            data.sort((a, b) => Number(a.position) - Number(b.position));
+            // Mapeamos los datos para asegurar que tengan los campos de trabajo del frontend
+            const planillaInicializada = data.map(c => ({
+                ...c,
+                position: c.position, // <--- ASEGÚRATE DE INCLUIR ESTO
+                // Si el backend devuelve 'name' lo usamos, si no 'customer_name'
+                name: c.name || c.customer_name,
+                address: c.address || c.customer_address,
+                // Campos necesarios para los cálculos de venta hoy
+                productos: {},
+                preciosPersonalizados: {},
+                venta_hoy: 0,
+                pago_hoy: 0,
+                abono_deuda: 0,
+                visit_status: c.visit_status || 'PENDIENTE'
+            }));
+
+            setPlanilla(planillaInicializada);
+        } catch (err) {
+            console.error("Error al cargar planilla:", err);
+            alertError("Error", "No se pudo actualizar la lista de clientes.");
+        } finally {
+            setLoading(false);
+        }
+    };
+    const handleSaveNewCustomer = async () => {
+        if (!newCustomer.name || !newCustomer.address) {
+            return alertError("Error", "Nombre y dirección son obligatorios");
+        }
+
+        try {
+            setLoading(true);
+
+            const idReferencia = newCustomer.afterCustomerId;
+            let posicionFinal = 1; // Por defecto al principio
+
+            if (idReferencia && idReferencia !== "") {
+                // Buscamos el cliente de referencia en la planilla actual
+                const clientePrevio = planilla.find(c => String(c.id) === String(idReferencia));
+                if (clientePrevio) {
+                    // La nueva posición es la del cliente seleccionado + 1
+                    posicionFinal = Number(clientePrevio.position) + 1;
+                }
+            }
+
+            const datosParaEnviar = {
+                name: newCustomer.name.toUpperCase().trim(),
+                address: newCustomer.address.toUpperCase().trim(),
+                phone: newCustomer.phone || "",
+                visit_day: selectedOrder?.visit_day || "Lunes", // Importante que coincida con la ruta actual
+                seller_id: user.id,
+                position: posicionFinal
+            };
+
+            const res = await customerService.createCustomer(datosParaEnviar);
+
+            if (res) {
+                alertSuccess("Éxito", `Cliente agregado en la posición ${posicionFinal}`);
+                setShowAddCustomerModal(false);
+                setNewCustomer({
+                    name: "", address: "", phone: "",
+                    afterCustomerId: "", visit_day: "Lunes", seller_id: user.id
+                });
+                // Recargar la planilla para ver el nuevo orden
+                await fetchPlanilla();
+            }
+        } catch (err) {
+            alertError("Error", err.message || "No se pudo crear el cliente");
+        } finally {
+            setLoading(false);
+        }
+    };
     if (loading) return <div className="loading-screen">Cargando...</div>;
 
     return (
@@ -585,7 +632,7 @@ export default function VentasPage() {
                                 <h3>Registrar Nuevo Cliente en Ruta</h3>
                                 <button className="btn-close" onClick={() => setShowAddCustomerModal(false)}><X /></button>
                             </div>
-                            <form onSubmit={handleAddCustomer}>
+                            <form onSubmit={handleSaveNewCustomer}>
                                 <div className="modal-body">
                                     <div className="form-group">
 
@@ -637,14 +684,30 @@ export default function VentasPage() {
                                         />
                                     </div>
                                 </div>
-                                <select onChange={e => setNewCustomer({ ...newCustomer, afterCustomerId: e.target.value })}>
-                                    <option value="">-- Al final --</option>
-                                    {planilla.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                <select
+                                    className="input-modern"
+                                    // CAMBIO: Asegúrate de usar afterCustomerId
+                                    value={newCustomer.afterCustomerId}
+                                    onChange={(e) => setNewCustomer({ ...newCustomer, afterCustomerId: e.target.value })}
+                                >
+                                    <option value="">-- Al principio de la ruta --</option>
+                                    {planilla.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                            Después de: {c.name}
+                                        </option>
+                                    ))}
                                 </select>
 
                                 <div className="modal-footer">
                                     <button type="button" className="btn-cancel" onClick={() => setShowAddCustomerModal(false)}>Cancelar</button>
-                                    <button type="submit" className="btn-confirm-modal">Agregar a la Tabla</button>
+                                    <button
+                                        type="submit"
+                                        className="btn-save-customer"
+                                        disabled={loading}
+                                    >
+                                        {loading ? "Registrando..." : "Registrar Cliente"}
+                                    </button>
+
                                 </div>
                             </form>
                         </div>
@@ -816,7 +879,6 @@ export default function VentasPage() {
                                         <th>NOMBRE</th>
                                         <th>ESTADO</th>
                                         <th>PRODUCTOS</th>
-                                        {/*<th>PAGO VENTA</th>*/}
                                         <th>DEBE</th>
                                         <th>ABONO</th>
                                         <th>TOTAL</th>
@@ -834,22 +896,32 @@ export default function VentasPage() {
                                             cliente.address.toLowerCase().includes(searchTerm.toLowerCase())
                                         )
                                         .map((cliente) => {
-                                            const idx = cliente.originalIdx; // Usamos el índice real del array original
-                                            const totalVentaHoy = calcularTotalFila(cliente);
-                                            const nuevoSaldo = (cliente.deuda_previa + totalVentaHoy) - (Number(cliente.pago_compra) + Number(cliente.abono_deuda));
-                                            const estadoClase = `fila-${cliente.status.toLowerCase()}`;
-                                            const esLleso = cliente.status === "LLESO";
+                                            const idx = cliente.originalIdx;
+
+                                            // --- 1. CÁLCULOS NUMÉRICOS SEGUROS ---
+                                            const totalVentaHoy = Number(calcularTotalFila(cliente) || 0);
+                                            const deudaPrevia = Number(cliente.total_debt || cliente.deuda_previa || 0);
+                                            const abonoDeuda = Number(cliente.abono_deuda || 0);
+                                            const pagoHoy = Number(cliente.pago_hoy || 0);
+
+                                            // --- 2. CÁLCULO DE NUEVO SALDO (Aquí se define la variable) ---
+                                            const nuevoSaldo = deudaPrevia + totalVentaHoy - (pagoHoy + abonoDeuda);
+
+                                            // --- 3. LÓGICA DE ESTADOS ---
+                                            const visitStatus = cliente.visit_status || '';
+                                            const estadoClase = `fila-${visitStatus.toLowerCase()}`;
+                                            const esLleso = visitStatus === "LLESO";
 
                                             return (
-                                                <tr key={idx} className={estadoClase}> {/* AGREGAMOS LA CLASE AQUÍ */}
-
-                                                    <td className="code-col">{cliente.id}</td>
+                                                <tr key={idx} className={estadoClase}>
+                                                    <td className="code-col">{cliente.position}</td>
                                                     <td className="address-col">{cliente.address}</td>
                                                     <td className="name-col">{cliente.name}</td>
+
                                                     <td>
                                                         <select
-                                                            value={cliente.status}
-                                                            onChange={(e) => updateCelda(idx, "status", e.target.value)}
+                                                            value={visitStatus}
+                                                            onChange={(e) => updateCelda(idx, "visit_status", e.target.value)}
                                                             className="status-select-mini"
                                                         >
                                                             <option value=""></option>
@@ -858,9 +930,10 @@ export default function VentasPage() {
                                                             <option value="LLESO">LLESO</option>
                                                         </select>
                                                     </td>
+
                                                     <td>
                                                         <button
-                                                            disabled={esLleso} // BLOQUEO
+                                                            disabled={esLleso}
                                                             className={`btn-vender ${totalVentaHoy > 0 ? 'con-venta' : ''}`}
                                                             onClick={() => abrirModalVenta(idx)}
                                                         >
@@ -868,26 +941,26 @@ export default function VentasPage() {
                                                             {totalVentaHoy > 0 ? ` $${totalVentaHoy.toLocaleString()}` : ' Vender'}
                                                         </button>
                                                     </td>
-                                                    {/*<td>
-                                                        <input
-                                                            type="number"
-                                                            value={cliente.pago_compra}
-                                                            disabled={esLleso} // BLOQUEO
-                                                            onChange={(e) => updateCelda(idx, "pago_compra", e.target.value)}
-                                                        />
-                                                    </td>*/}
-                                                    <td>${cliente.deuda_previa.toLocaleString()}</td>
+
+                                                    {/* Mostramos Deuda Previa */}
+                                                    <td>${deudaPrevia.toLocaleString()}</td>
+
                                                     <td>
                                                         <input
                                                             type="number"
-                                                            value={cliente.abono_deuda}
-                                                            disabled={esLleso} // BLOQUEO
+                                                            className="input-celda"
+                                                            value={cliente.abono_deuda || ""}
+                                                            disabled={esLleso}
+                                                            placeholder="0"
                                                             onChange={(e) => updateCelda(idx, "abono_deuda", e.target.value)}
                                                         />
                                                     </td>
+
+                                                    {/* CELDA DE NUEVO SALDO (Ahora sí existe la variable) */}
                                                     <td className={`total-cell ${nuevoSaldo > 0 ? 'deuda' : 'saldo-ok'}`}>
                                                         ${nuevoSaldo.toLocaleString()}
                                                     </td>
+
                                                     <td>
                                                         {cliente.facturaBlob && (
                                                             <a href={cliente.facturaBlob} download={`Factura_${cliente.name}.pdf`} className="btn-download-pdf">
