@@ -33,6 +33,31 @@ const createSale = async (req, res) => {
                 [m_totalVentaHoy, efectivoTotalRecibido, customer_id]
             );
 
+            // 2. Consultamos nueva deuda real
+            const [clienteActualizado] = await connection.query(
+                `SELECT total_debt FROM customers WHERE id = ?`,
+                [customer_id]
+            );
+
+            const nuevaDeuda = Number(clienteActualizado[0].total_debt) || 0;
+            // 3. LÓGICA EMPRESARIAL DE LLESO
+            if (visit_status === "LLESO") {
+
+                if (nuevaDeuda > 0) {
+                    // ✅ Se mantiene LLESO
+                    await connection.query(
+                        `UPDATE customers SET visit_status = 'LLESO' WHERE id = ?`,
+                        [customer_id]
+                    );
+                } else {
+                    // ❌ No debe → quitar estado
+                    await connection.query(
+                        `UPDATE customers SET visit_status = NULL WHERE id = ?`,
+                        [customer_id]
+                    );
+                }
+
+            }
             // 2. REGISTRAR EN LA TABLA SALES (Solo columnas existentes en tu SQL)
             // Según tu SQL, 'sales' tiene: id, order_id, customer_id, total_amount, amount_paid, visit_status, created_at
             // Guardaremos en 'amount_paid' el TOTAL del efectivo recibido.
@@ -46,8 +71,8 @@ const createSale = async (req, res) => {
                     created_at
                 ) VALUES (?, ?, ?, ?, ?, NOW())`,
                 [
-                    order_id, 
-                    customer_id, 
+                    order_id,
+                    customer_id,
                     m_totalVentaHoy, // Valor de la nota/remisión
                     efectivoTotalRecibido, // Total dinero que entró a caja
                     visit_status
@@ -61,9 +86,9 @@ const createSale = async (req, res) => {
                         `INSERT INTO sale_items (sale_id, quantity, unit_price, total_price) 
                          VALUES (?, ?, ?, ?)`,
                         [
-                            saleRes.insertId, 
-                            item.quantity, 
-                            item.unit_price, 
+                            saleRes.insertId,
+                            item.quantity,
+                            item.unit_price,
                             item.total_price
                         ]
                     );

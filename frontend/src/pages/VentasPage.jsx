@@ -210,8 +210,8 @@ export default function VentasPage() {
                     name: c.name || c.customer_name,
                     address: c.address || c.customer_address || "",
                     phone: c.phone || "",
-                    visit_status: "",
-                    deuda_previa: Number(c.total_debt || 0),
+                    visit_status: c.visit_status_c || "PENDIENTE", // Usamos el campo correcto del backend
+                    total_debt: Number(c.total_debt || 0),
                     venta_hoy: 0,
                     productos: {},
                     preciosPersonalizados: {},
@@ -277,25 +277,26 @@ export default function VentasPage() {
 
         cliente[campo] = valor;
 
-        // Lógica para estado LLESO
-        if (campo === "visit_status" && valor === "LLESO") {
+        if (campo === "visit_status_c" && valor === "LLESO") {
+
             const totalVentaHoy = calcularTotalFila(cliente);
-            const nuevoSaldo = (cliente.deuda_previa + totalVentaHoy) -
-                (Number(cliente.amount_paid) + Number(cliente.credit_amount));
+            const deudaPrevia = Number(cliente.total_debt || 0);
+            const amountPaid = Number(cliente.amount_paid || 0);
+            const abonoDeuda = 0; // No se usa abono_deuda en este caso
+            const pagoHoy = amountPaid;
 
-            // REGLA: Si es LLESO y no debe nada, se elimina de la planilla
+            const nuevoSaldo = deudaPrevia + totalVentaHoy - (pagoHoy + abonoDeuda);
+
             if (nuevoSaldo <= 0) {
-                if (window.confirm(`El cliente ${cliente.name} no tiene deuda. ¿Eliminar de esta ruta?`)) {
-                    nuevaPlanilla.splice(idx, 1);
-                    setPlanilla(nuevaPlanilla);
-                    return;
-                } else {
-                    cliente.visit_status = "PENDIENTE"; // Revertir si cancela
-                }
+                // ❌ NO DEBE → eliminar de planilla
+                nuevaPlanilla.splice(idx, 1);
+                setPlanilla(nuevaPlanilla);
+                return;
             }
-            // Si DEBE, el cliente se queda en la lista con estado LLESO (bloqueado por CSS)
-        }
 
+            // ✅ SI DEBE → se queda LLESO
+            cliente.visit_status_c = "LLESO";
+        }
         setPlanilla(nuevaPlanilla);
     };
     //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -338,10 +339,10 @@ export default function VentasPage() {
                     customer_address: v.address,
                     customer_name: v.name,
                     customer_phone: v.phone,
-                    visit_status: v.status || "PENDIENTE",
+                    visit_status: v.visit_status_c || "PENDIENTE",
                     total_amount: calcularTotalFila(v),
-                    amount_paid: Number(v.pago_compra) || 0,
-                    credit_amount: Number(v.abono_deuda) || 0,
+                    amount_paid: Number(v.amount_paid) || 0,
+                    credit_amount: Number(v.credit_amount) || 0,
                     // Asegúrate de enviar solo los productos con cantidad > 0
                     items: Object.entries(v.productos)
                         .filter(([_, cant]) => cant > 0)
@@ -512,7 +513,7 @@ export default function VentasPage() {
 
                 // Opcional: Podrías marcar aquí que el estado de visita cambió a 'VENDIDO'
                 if (totalVenta > 0) {
-                    nuevaPlanilla[clienteActualIdx].visit_status = 'VENDIDO';
+                    nuevaPlanilla[clienteActualIdx].visit_status_c = 'VENDIDO';
                 }
 
                 setPlanilla(nuevaPlanilla);
@@ -537,19 +538,20 @@ export default function VentasPage() {
             data.sort((a, b) => Number(a.position) - Number(b.position));
             // Mapeamos los datos para asegurar que tengan los campos de trabajo del frontend
             const planillaInicializada = data.map(c => ({
-                ...c,
-                position: c.position, // <--- ASEGÚRATE DE INCLUIR ESTO
-                // Si el backend devuelve 'name' lo usamos, si no 'customer_name'
+                id: c.id,
+                position: c.position,
                 name: c.name || c.customer_name,
                 address: c.address || c.customer_address,
-                // Campos necesarios para los cálculos de venta hoy
+                phone: c.phone,
+                total_debt: Number(c.total_debt || 0), // 👈 importante
                 productos: {},
                 preciosPersonalizados: {},
                 venta_hoy: 0,
                 pago_hoy: 0,
                 abono_deuda: 0,
-                visit_status: c.visit_status || 'PENDIENTE'
+                visit_status_c: c.visit_status_c || "PENDIENTE"
             }));
+
 
             setPlanilla(planillaInicializada);
         } catch (err) {
@@ -900,12 +902,11 @@ export default function VentasPage() {
 
                                             // --- 1. CÁLCULOS NUMÉRICOS SEGUROS ---
                                             const totalVentaHoy = Number(calcularTotalFila(cliente) || 0);
-                                            const deudaPrevia = Number(cliente.total_debt || cliente.deuda_previa || 0);
-                                            const abonoDeuda = Number(cliente.abono_deuda || 0);
-                                            const pagoHoy = Number(cliente.pago_hoy || 0);
+                                            const deudaPrevia = Number(cliente.total_debt || 0);
+                                            const amountPaid = Number(cliente.amount_paid) || 0;
 
-                                            // --- 2. CÁLCULO DE NUEVO SALDO (Aquí se define la variable) ---
-                                            const nuevoSaldo = deudaPrevia + totalVentaHoy - (pagoHoy + abonoDeuda);
+                                            const nuevoSaldo = deudaPrevia + totalVentaHoy - amountPaid;
+
 
                                             // --- 3. LÓGICA DE ESTADOS ---
                                             const visitStatus = cliente.visit_status || '';
@@ -949,11 +950,14 @@ export default function VentasPage() {
                                                         <input
                                                             type="number"
                                                             className="input-celda"
-                                                            value={cliente.abono_deuda || ""}
+                                                            value={cliente.amount_paid || ""}
                                                             disabled={esLleso}
                                                             placeholder="0"
-                                                            onChange={(e) => updateCelda(idx, "abono_deuda", e.target.value)}
+                                                            onChange={(e) =>
+                                                                updateCelda(idx, "amount_paid", Number(e.target.value) || 0)
+                                                            }
                                                         />
+
                                                     </td>
 
                                                     {/* CELDA DE NUEVO SALDO (Ahora sí existe la variable) */}

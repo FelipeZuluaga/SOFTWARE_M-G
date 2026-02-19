@@ -21,7 +21,8 @@ const getCustomersWithBalance = async (req, res) => {
                 total_debt,
                 visit_day,
                 position,
-                seller_id
+                seller_id,
+                visit_status_c   -- 👈 IMPORTANTE
             FROM customers
             WHERE seller_id = ?
             ORDER BY position ASC
