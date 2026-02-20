@@ -2,7 +2,8 @@ const db = require('../config/db');
 
 const getCustomersWithBalance = async (req, res) => {
     try {
-        const { seller_id } = req.query;
+        // 1. Extraemos también visit_day de la query
+        const { seller_id, visit_day } = req.query;
 
         if (!seller_id) {
             return res.status(400).json({
@@ -11,8 +12,8 @@ const getCustomersWithBalance = async (req, res) => {
             });
         }
 
-        const [rows] = await db.query(
-            `
+        // 2. Preparamos la base de la consulta y los parámetros
+        let query = `
             SELECT 
                 id,
                 name AS customer_name, 
@@ -22,13 +23,23 @@ const getCustomersWithBalance = async (req, res) => {
                 visit_day,
                 position,
                 seller_id,
-                visit_status_c   -- 👈 IMPORTANTE
+                visit_status_c
             FROM customers
             WHERE seller_id = ?
-            ORDER BY position ASC
-            `,
-            [seller_id]
-        );
+        `;
+        
+        const params = [seller_id];
+
+        // 3. Si viene el día, lo agregamos al filtro dinámicamente
+        if (visit_day) {
+            query += " AND visit_day = ?";
+            params.push(visit_day);
+        }
+
+        // 4. Mantenemos el orden por posición
+        query += " ORDER BY position ASC";
+
+        const [rows] = await db.query(query, params);
 
         res.json({
             success: true,

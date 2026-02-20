@@ -5,10 +5,11 @@
 /* Contenedor principal: elimina el scroll lateral innecesario */
 .planilla-wrapper {
     width: 100%;
-    overflow-x: auto; /* Permite scroll solo si es estrictamente necesario */
+    overflow-x: auto;
+    /* Permite scroll solo si es estrictamente necesario */
     background: #ffffff;
     border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     padding: 5px;
 }
 
@@ -16,14 +17,24 @@
 .excel-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11px; /* Fuente más pequeña para ver más datos */
+    font-size: 11px;
+    /* Fuente más pequeña para ver más datos */
     table-layout: auto;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    /* Alinea verticalmente al centro */
+    gap: 15px;
+    /* Crea un espacio uniforme de 15px entre el botón y el buscador */
 }
 
 /* Celdas generales con menos espacio */
 .excel-table th,
 .excel-table td {
-    padding: 6px 4px; /* Padding reducido al mínimo */
+    padding: 6px 4px;
+    /* Padding reducido al mínimo */
     text-align: center;
     border-bottom: 1px solid #e2e8f0;
     white-space: nowrap;
@@ -57,15 +68,23 @@
 }
 
 /* Inputs más pequeños para que no ensanchen la fila */
-.excel-table input[type="number"], 
+.excel-table input[type="number"],
 .status-select-mini {
-    width: 100px;
-    height: 24px;
+    width: 105px;
+    height: 28px;
     font-size: 11px;
-    padding: 0 2px;
-    border-radius: 4px;
-    border: 1px solid #d1d5db;
+    font-weight: 700;
+    padding: 0 8px;
+    border-radius: 20px;
+    /* Bordes muy redondeados tipo badge */
+    border: none;
     text-align: center;
+    cursor: pointer;
+    appearance: none;
+    /* Quita la flecha por defecto en algunos navegadores */
+    transition: all 0.3s ease;
+    outline: none;
+    text-transform: uppercase;
 }
 
 /* Columna de totales resaltada */
@@ -90,6 +109,7 @@
     margin: 0;
     font-size: 16px;
 }
+
 /* Estilos para la lista de productos dinámica */
 .products-cell {
     padding: 8px !important;
@@ -155,6 +175,7 @@
     color: #16a34a;
     background: #f0fdf4;
 }
+
 /* Modal Estilos */
 .modal-overlay {
     position: fixed;
@@ -253,6 +274,7 @@
     align-items: center;
     gap: 5px;
 }
+
 .btn-download-pdf {
     background: #fff0f0;
     border: 1px solid #be2b48;
@@ -281,6 +303,7 @@
     font-weight: bold;
     cursor: pointer;
 }
+
 /* --- COLORES POR ESTADO --- */
 
 /* VISITADO - VERDE */
@@ -288,7 +311,7 @@
 .fila-visitado td:nth-child(2),
 .fila-visitado td:nth-child(3),
 .fila-visitado td:nth-child(4) {
-    background-color: #dcfce7 !important; 
+    background-color: #dcfce7 !important;
     color: #166534 !important;
 }
 
@@ -316,7 +339,7 @@
 }
 
 /* Inhabilitar inputs y botones, pero dejar el select libre */
-.fila-lleso input, 
+.fila-lleso input,
 .fila-lleso button:not(.btn-download-pdf) {
     pointer-events: none;
     background-color: #f1f5f9 !important;
@@ -328,6 +351,7 @@
     pointer-events: auto !important;
     background-color: white !important;
 }
+
 .header-actions {
     display: flex;
     justify-content: space-between;
@@ -336,7 +360,8 @@
     padding: 20px 30px;
     border-radius: 12px 12px 0 0;
     border-bottom: 2px solid #f1f5f9;
-    margin-bottom: 0; /* Para que pegue con la tabla */
+    margin-bottom: 0;
+    /* Para que pegue con la tabla */
 }
 
 .header-center {
@@ -383,7 +408,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #1e293b; /* Color oscuro profesional */
+    background: #1e293b;
+    /* Color oscuro profesional */
     color: white;
     border: none;
     padding: 10px 20px;
@@ -398,20 +424,24 @@
     transform: translateY(-1px);
     box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15);
 }
+
 .ruta-subtitle {
     margin: 4px 0 0 0;
-    font-size: 0.85rem; /* Un poco más grande para legibilidad */
+    font-size: 0.85rem;
+    /* Un poco más grande para legibilidad */
     color: #475569;
     font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 5px;
-    text-transform: capitalize; /* Para que el día empiece en mayúscula */
+    text-transform: capitalize;
+    /* Para que el día empiece en mayúscula */
 }
 
 .ruta-subtitle svg {
-    color: #be2b48; /* Color de énfasis para el ícono del reloj */
+    color: #be2b48;
+    /* Color de énfasis para el ícono del reloj */
 }
 
 .capitalize {
@@ -426,27 +456,32 @@
     color: #0f172a;
     letter-spacing: -0.5px;
 }
+
 .btn-add-customer {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #10b981; /* Verde esmeralda */
+    background: #b9101b;
+    /* Verde esmeralda */
     color: white;
     border: none;
     padding: 10px 18px;
     border-radius: 8px;
     font-weight: 600;
-    margin-right: 10px; /* Separación del botón Guardar */
+    margin-right: 10px;
+    /* Separación del botón Guardar */
     transition: 0.2s;
 }
 
 .btn-add-customer:hover {
-    background: #059669;
+    background: #902c35;
 }
 
 .form-group {
-    margin-bottom: 15px;
-    text-align: left;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    /* Asegura que los inputs ocupen su contenedor */
 }
 
 .form-group label {
@@ -468,6 +503,7 @@
 .customer-modal {
     max-width: 450px !important;
 }
+
 /* Contenedor de días: Estilo Moderno */
 .dias-selector-container {
     display: flex;
@@ -481,7 +517,8 @@
     padding: 10px 20px;
     border: 2px solid #e2e8f0;
     background: white;
-    border-radius: 50px; /* Redondos */
+    border-radius: 50px;
+    /* Redondos */
     font-weight: 600;
     color: #64748b;
     cursor: pointer;
@@ -494,7 +531,8 @@
 }
 
 .btn-dia.selected {
-    background: #be2b48; /* Tu color guinda/rojo */
+    background: #be2b48;
+    /* Tu color guinda/rojo */
     color: white;
     border-color: #be2b48;
     box-shadow: 0 4px 12px rgba(190, 43, 72, 0.3);
@@ -542,7 +580,85 @@
     font-size: 0.75rem;
     font-weight: 700;
 }
-.status-pendiente { background: #fef3c7; color: #92400e; }
+
+/* Celda contenedora */
+.col-status {
+    text-align: center;
+    vertical-align: middle;
+    padding: 4px !important;
+    /* Reducimos padding para que no sobre espacio */
+    width: 110px;
+    /* Definimos un ancho fijo para que la columna sea delgada */
+}
+
+.status-select-badge {
+    display: block;
+    margin: 0 auto;
+    width: 95px;
+    /* Un poco más de ancho para que quepa el texto */
+    height: 26px;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: 12px;
+    /* Redondeado pero no excesivo para no apretar el texto */
+    border: 1px solid transparent;
+    cursor: pointer;
+
+    /* Centrado crítico */
+    text-align: center;
+    text-align-last: center;
+    /* Centra el texto en Chrome/Safari */
+    padding: 0;
+    /* Quitamos paddings laterales que empujan el texto */
+    line-height: 24px;
+    /* Alineación vertical */
+
+    transition: all 0.2s ease;
+    outline: none;
+
+    /* Para ver el texto en móviles y otros navegadores */
+    background-position: center;
+    text-indent: 0px;
+}
+
+/* Ajuste opcional para la columna */
+.col-status {
+    width: 110px;
+    min-width: 110px;
+    text-align: center;
+}
+
+/* Colores más suaves y profesionales */
+.status-pendiente {
+    background-color: #fffbeb;
+    color: #b45309;
+    border-color: #fcd34d;
+}
+
+.status-visitado {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border-color: #86efac;
+}
+
+.status-lleso {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+}
+
+/* Efecto Hover para que se sienta interactivo */
+.status-select-mini:hover {
+    filter: brightness(0.95);
+    transform: scale(1.02);
+}
+
+/* Estilo para las opciones dentro del desplegable */
+.status-select-mini option {
+    background-color: white;
+    color: #333;
+    font-weight: normal;
+}
 
 
 .filters-container {
@@ -609,14 +725,25 @@
     font-weight: 700;
     text-transform: uppercase;
 }
-.badge-status.pendiente { background: #fff7ed; color: #9a3412; border: 1px solid #ffedd5; }
-.badge-status.pagado { background: #f0fdf4; color: #166534; border: 1px solid #dcfce7; }
+
+.badge-status.pendiente {
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #ffedd5;
+}
+
+.badge-status.pagado {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #dcfce7;
+}
 
 /* Contenedor principal de la sección de filtros */
 .filters-card {
     background: #ffffff;
     border-radius: 12px;
-    padding: 24px; /* Más espacio interno */
+    padding: 24px;
+    /* Más espacio interno */
     margin: 20px 0;
     border: 1px solid #e2e8f0;
 }
@@ -626,7 +753,7 @@
     display: flex;
     flex-wrap: wrap;
     /* 50px de separación real entre cada buscador */
-    gap: 50px; 
+    gap: 50px;
     align-items: flex-end;
     justify-content: flex-start;
 }
@@ -635,20 +762,24 @@
 .filter-group {
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Espacio entre el texto de arriba y el cuadro de texto */
-    width: 280px; /* Ancho fijo para que no se peguen ni se estiren */
+    gap: 10px;
+    /* Espacio entre el texto de arriba y el cuadro de texto */
+    width: 280px;
+    /* Ancho fijo para que no se peguen ni se estiren */
 }
 
 /* Estilo del Input mejorado */
 .filter-input {
     height: 45px;
     padding: 0 15px;
-    background: #ffffff; /* Fondo blanco para que resalte del gris */
+    background: #ffffff;
+    /* Fondo blanco para que resalte del gris */
     border: 1.5px solid #cbd5e1;
     border-radius: 10px;
     font-size: 0.95rem;
     color: #1e293b;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.03); /* Sombra muy suave */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    /* Sombra muy suave */
     transition: all 0.3s ease;
 }
 
@@ -656,7 +787,8 @@
     border-color: #be2b48;
     box-shadow: 0 0 0 4px rgba(190, 43, 72, 0.15);
     outline: none;
-    transform: translateY(-1px); /* Efecto de elevación al hacer clic */
+    transform: translateY(-1px);
+    /* Efecto de elevación al hacer clic */
 }
 
 /* Etiquetas más elegantes */
@@ -669,16 +801,20 @@
     color: #475569;
     letter-spacing: 0.5px;
 }
+
 /* Estilo del Botón Limpiar Filtros */
 .btn-clear-filters {
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: #fff1f2; /* Un rojo muy tenue de fondo */
-    color: #be2b48; /* Tu color guinda/rojo principal */
+    background-color: #fff1f2;
+    /* Un rojo muy tenue de fondo */
+    color: #be2b48;
+    /* Tu color guinda/rojo principal */
     border: 1.5px solid #fecdd3;
     padding: 0 20px;
-    height: 48px; /* Misma altura que tus inputs para que queden alineados */
+    height: 48px;
+    /* Misma altura que tus inputs para que queden alineados */
     border-radius: 10px;
     font-size: 0.9rem;
     font-weight: 700;
@@ -689,7 +825,8 @@
 }
 
 .btn-clear-filters:hover {
-    background-color: #be2b48; /* Se vuelve sólido al pasar el mouse */
+    background-color: #be2b48;
+    /* Se vuelve sólido al pasar el mouse */
     color: white;
     border-color: #be2b48;
     box-shadow: 0 4px 12px rgba(190, 43, 72, 0.2);
@@ -702,18 +839,27 @@
 
 /* Opcional: Si quieres que aparezca con una pequeña animación */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateX(-10px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .btn-clear-filters {
     animation: fadeIn 0.3s ease-out;
 }
+
 /* Espaciado y Diseño del Modal Moderno */
 .modal-ventas-xl {
     width: 95%;
     max-width: 900px;
-    padding: 40px !important; /* Más espacio interno */
+    padding: 40px !important;
+    /* Más espacio interno */
     border-radius: 20px !important;
 }
 
@@ -737,7 +883,8 @@
 /* Tabla con filas espaciadas */
 .modal-table-modern {
     width: 100%;
-    border-spacing: 0 12px; /* Espacio vertical entre filas */
+    border-spacing: 0 12px;
+    /* Espacio vertical entre filas */
     border-collapse: separate;
     margin: 25px 0;
 }
@@ -757,8 +904,15 @@
     border-bottom: 1px solid #f1f5f9;
 }
 
-.modal-table-modern td:first-child { border-left: 1px solid #f1f5f9; border-radius: 12px 0 0 12px; }
-.modal-table-modern td:last-child { border-right: 1px solid #f1f5f9; border-radius: 0 12px 12px 0; }
+.modal-table-modern td:first-child {
+    border-left: 1px solid #f1f5f9;
+    border-radius: 12px 0 0 12px;
+}
+
+.modal-table-modern td:last-child {
+    border-right: 1px solid #f1f5f9;
+    border-radius: 0 12px 12px 0;
+}
 
 /* Inputs Modernos y Grandes */
 .input-modern {
@@ -805,9 +959,11 @@
     cursor: pointer;
     box-shadow: 0 10px 15px -3px rgba(190, 43, 72, 0.3);
 }
+
 /* Resaltar fila con productos seleccionados */
 .modal-table-modern tr.row-active td {
-    background-color: #fff1f2 !important; /* Un rojo muy suave */
+    background-color: #fff1f2 !important;
+    /* Un rojo muy suave */
     border-top: 1px solid #fecdd3;
     border-bottom: 1px solid #fecdd3;
 }
@@ -823,6 +979,7 @@ input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
+
 .input-search-planilla {
     padding: 8px 12px;
     border: 1px solid #cbd5e1;
@@ -836,4 +993,153 @@ input::-webkit-inner-spin-button {
     outline: none;
     border-color: #be2b48;
     box-shadow: 0 0 0 2px rgba(190, 43, 72, 0.1);
+}
+
+
+/* Contenedor Principal del Modal */
+.customer-modal-modern {
+    max-width: 500px;
+    width: 95%;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+/* Encabezado */
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.icon-header {
+    color: #be2b48;
+}
+
+/* Secciones del Formulario */
+.form-section {
+    padding: 10px 0;
+}
+
+.section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 15px;
+    letter-spacing: 0.5px;
+}
+
+.form-divider {
+    border: 0;
+    border-top: 1px solid #f1f5f9;
+    margin: 20px 0;
+}
+
+/* Inputs y Selects Modernos */
+.form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1e293b;
+    margin-bottom: 6px;
+}
+
+.form-control,
+.form-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #be2b48;
+    box-shadow: 0 0 0 3px rgba(190, 43, 72, 0.1);
+    outline: none;
+}
+
+.form-grid {
+    display: grid;
+    /* Esto ajusta las columnas automáticamente según el espacio y cantidad de items */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    width: 100%;
+}
+
+/* Botones */
+.modal-footer {
+    background: #f8fafc;
+    padding: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-secondary {
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: #e2e8f0;
+    color: #475569;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary-action {
+    padding: 10px 25px;
+    border-radius: 10px;
+    background: #be2b48;
+    color: white;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(190, 43, 72, 0.3);
+    transition: transform 0.2s;
+}
+
+.btn-primary-action:hover:not(:disabled) {
+    background: #a0243d;
+    transform: translateY(-1px);
+}
+
+.btn-primary-action:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* El select estilo Badge */
+.status-select-badge {
+    display: block;
+    margin: 0 auto;
+    /* Centrado horizontal */
+    width: 90px;
+    /* Ancho controlado */
+    height: 26px;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: 15px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-align: center;
+    text-align-last: center;
+    /* Centra el texto dentro del select en algunos navegadores */
+    transition: all 0.2s ease;
+    outline: none;
+    appearance: none;
+    /* Quitamos la flecha default para que sea más limpio */
+}
+
+/* Celda contenedora */
+.col-status {
+    text-align: center;
+    vertical-align: middle;
+    padding: 4px !important;
+    /* Reducimos padding para que no sobre espacio */
+    width: 110px;
+    /* Definimos un ancho fijo para que la columna sea delgada */
 }

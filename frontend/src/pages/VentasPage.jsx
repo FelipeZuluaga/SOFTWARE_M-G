@@ -17,160 +17,14 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 
-// --- 1. MOVER EL MODAL FUERA DEL COMPONENTE PRINCIPAL ---
-// Esto evita que el input pierda el foco al escribir.
-const ModalProductos = ({
-    show,
-    onClose,
-    cliente,
-    orderItems,
-    updatePrecioVenta,
-    handleCantidadChange,
-    confirmarVentaModal,
-    calcularTotalFila
-}) => {
-    // ESTADO PARA EL BUSCADOR DE PRODUCTOS
-    const [searchTerm, setSearchTerm] = useState("");
-    if (!show || !cliente) return null;
-    // FILTRADO DINÁMICO DE PRODUCTOS
-    const productosFiltrados = orderItems.filter(item =>
-        item.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    return (
-        <div className="modal-overlay">
-            <div className="modal-content modal-ventas-xl">
-                <div className="modal-header">
-                    <div className="header-info">
-                        <h3><ShoppingCart className="inline-icon" /> Registro de Venta</h3>
-                        <div className="client-badge">
-                            <span className="client-name">{cliente.name}</span>
-                            <span className="client-address">{cliente.address}</span>
-                        </div>
-                    </div>
-                    {/* --- BUSCADOR DE PRODUCTOS --- */}
-                    <div className="modal-search-wrapper" style={{ margin: '0 20px', flex: 1 }}>
-                        <input
-                            type="text"
-                            placeholder="Buscar producto por nombre..."
-                            className="input-modern"
-                            style={{ width: '100%', maxWidth: '300px' }}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-
-                    <button className="btn-close-modal" onClick={onClose}><X /></button>
-                </div>
-
-                <div className="modal-body">
-                    <table className="modal-table-modern">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th>Stock</th>
-                                <th>Precio Unit.</th>
-                                <th>Cantidad</th>
-                                <th>Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {/* USAMOS LA LISTA FILTRADA */}
-                            {productosFiltrados.map((item) => {
-
-                                const cant = cliente.productos[item.product_id] || 0;
-                                const precioVenta = cliente.preciosPersonalizados?.[item.product_id] ?? "";
-                                const stockDisponible = item.quantity;
-                                const tieneVenta = cant > 0;
-
-                                return (
-                                    <tr key={item.product_id} className={tieneVenta ? "row-active" : ""}>
-                                        <td className="prod-name-cell">
-                                            <span className="p-name">{item.product_name}</span>
-                                        </td>
-                                        <td>
-                                            <span className={`stock-pill ${stockDisponible <= 5 ? 'low' : ''}`}>
-                                                {stockDisponible}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <input
-                                                type="text"
-                                                className="input-modern price"
-                                                placeholder="0" // Esto muestra el 0 tenue cuando no hay nada escrito
-                                                value={precioVenta}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (val === "" || /^[0-9]+$/.test(val)) {
-                                                        updatePrecioVenta(item.product_id, val);
-                                                    }
-                                                }}
-                                                onFocus={(e) => e.target.select()} // OPCIONAL: Selecciona todo al hacer click para sobrescribir rápido
-                                                autoComplete="off"
-                                            />
-                                        </td>
-                                        <td>
-                                            <input
-                                                type="number"
-                                                className={`input-modern qty ${cant > stockDisponible ? "error" : ""}`}
-                                                placeholder="0"
-                                                value={cant === 0 ? "" : cant}
-                                                onChange={(e) => handleCantidadChange(item.product_id, e.target.value, stockDisponible)}
-                                            />
-                                        </td>
-                                        <td className={`subtotal-cell ${tieneVenta ? "active-amount" : ""}`}>
-                                            ${(cant * (Number(precioVenta) || 0)).toLocaleString()}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div className="modal-footer-modern">
-                    <div className="total-container">
-                        <span className="total-label">TOTAL A COBRAR:</span>
-                        <span className="total-amount">${calcularTotalFila(cliente).toLocaleString()}</span>
-                    </div>
-                    <button
-                        className="btn-confirm-final"
-                        onClick={confirmarVentaModal}
-                        disabled={calcularTotalFila(cliente) === 0 && Number(cliente.abono_deuda) === 0}
-                    >
-                        Confirmar Venta y Generar PDF
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
 export default function VentasPage() {
-    const [pendingOrders, setPendingOrders] = useState([]);
+
     const [selectedOrder, setSelectedOrder] = useState(null);
-    const [orderItems, setOrderItems] = useState([]);
+
+    const [pendingOrders, setPendingOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [orderItems, setOrderItems] = useState([]);
     const [planilla, setPlanilla] = useState([]);
-    // Estados para la Modal
-    const [showModal, setShowModal] = useState(false);
-    const [clienteActualIdx, setClienteActualIdx] = useState(null);
-    const user = JSON.parse(localStorage.getItem("user"));
-    const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-    const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().getDay());
-    // ESTADOS PARA EL MODAL DE REGISTRO DE CLIENTES
-    const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
-    const [newCustomer, setNewCustomer] = useState({
-        name: "",
-        address: "",
-        phone: "",
-        afterCustomerId: "", // Para saber detrás de quién va
-        visit_day: "Lunes",
-        seller_id: "" // Solo lo usará el Admin
-    });
-    const [filterID, setFilterID] = useState("");
-    const [filterVendedor, setFilterVendedor] = useState("");
-    const [searchTerm, setSearchTerm] = useState("");
-    const navigate = useNavigate(); // Inicializar el hook
-    useEffect(() => { loadPendingOrders(); }, []);
 
     const loadPendingOrders = async () => {
         try {
@@ -181,125 +35,34 @@ export default function VentasPage() {
         } catch (err) { alertError("Error", "No se cargaron los despachos."); }
         finally { setLoading(false); }
     };
-    // 1. Definimos la fecha actual formateada
-    const fechaHoy = new Date().toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-    });
-    const handleSelectOrder = async (order) => {
-        try {
-            setLoading(true);
-            // 1. Obtener productos del camión para esta orden
-            const items = await orderService.getOrderDetail(order.id);
-            setSelectedOrder(order);
-            setOrderItems(items);
 
-            // 2. Intentar cargar progreso guardado de LocalStorage
-            const guardado = localStorage.getItem(`planilla_${order.id}`);
+    // 1. Efecto para cargar las órdenes al inicio (Ya lo tienes)
+    useEffect(() => {
+        loadPendingOrders();
+    }, []);
 
-            if (guardado) {
-                setPlanilla(JSON.parse(guardado));
-            } else {
-                // 3. Si no hay guardado, cargar clientes desde la API
-                // Usamos el ID del usuario actual para filtrar por su ruta
-                const clientesBase = await customerService.getBalances(user.id);
-
-                const inicializarPlanilla = clientesBase.map(c => ({
-                    id: c.id,
-                    name: c.name || c.customer_name,
-                    address: c.address || c.customer_address || "",
-                    phone: c.phone || "",
-                    visit_status: c.visit_status_c || "PENDIENTE", // Usamos el campo correcto del backend
-                    total_debt: Number(c.total_debt || 0),
-                    venta_hoy: 0,
-                    productos: {},
-                    preciosPersonalizados: {},
-                    facturaBlob: null
-                }));
-
-
-                setPlanilla(inicializarPlanilla);
-            }
-        } catch (err) {
-            console.error("Error al seleccionar orden:", err);
-            alertError("Error", "No se pudo cargar la planilla de clientes.");
-        } finally {
-            setLoading(false);
+    // 2. NUEVO: Efecto para PERSISTIR cambios automáticamente
+    useEffect(() => {
+        // Solo guardamos si hay una orden seleccionada y la planilla tiene datos
+        if (selectedOrder && planilla.length > 0) {
+            localStorage.setItem(`planilla_${selectedOrder.id}`, JSON.stringify(planilla));
+            console.log("Cambios guardados en local.");
         }
-    };
+    }, [planilla, selectedOrder]); // Se ejecuta cada vez que 'planilla' o 'selectedOrder' cambien
 
-    // --- LÓGICA DE MODAL Y VENTAS ---
-    const abrirModalVenta = (idx) => {
-        setClienteActualIdx(idx);
-        setShowModal(true);
-    };
+    //PARA CONTROL PARA PERMISOS SEGUN EL TIPO DE ROL DE USUARIO
+    // Por esto:
+    const user = useMemo(() => {
+        const savedUser = localStorage.getItem("user");
+        return savedUser ? JSON.parse(savedUser) : { id: null, role: 'INVITADO', name: '' };
+    }, []);
+    // Para mostrar los días de la semana en el selector
+    const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().getDay());
 
-    const updateCantidadVenta = (prodId, nuevaCant) => {
-        const itemStock = orderItems.find(i => i.product_id === prodId);
-        const cantidadInput = parseInt(nuevaCant) || 0;
-
-        if (cantidadInput > itemStock.quantity) {
-            alertError("Sin Stock", `Solo tienes ${itemStock.quantity} en el camión.`);
-            return;
-        }
-
-        const nuevaPlanilla = [...planilla];
-        nuevaPlanilla[clienteActualIdx].productos[prodId] = cantidadInput;
-        setPlanilla(nuevaPlanilla);
-    };
-
-    const calcularTotalFila = (cliente) => {
-        // 1. Verificación de seguridad
-        if (!cliente || !cliente.productos) return 0;
-
-        return Object.entries(cliente.productos).reduce((sum, [prodId, cant]) => {
-            // 2. Convertir cant a número para evitar errores de string
-            const cantidad = Number(cant) || 0;
-            if (cantidad <= 0) return sum;
-
-            // 3. Buscar el producto en la carga del camión (orderItems)
-            const item = orderItems.find(i => String(i.product_id) === String(prodId));
-
-            // 4. Lógica de Precio: Manual vs Base
-            const precioManual = cliente.preciosPersonalizados?.[prodId];
-            const precioEfectivo = (precioManual !== undefined && precioManual !== "" && precioManual !== null)
-                ? Number(precioManual)
-                : (Number(item?.unit_price) || 0);
-
-            return sum + (cantidad * precioEfectivo);
-        }, 0);
-    };
-    //--------------------------------------------------------------------------------------------------------------------------------------------
-    const updateCelda = (idx, campo, valor) => {
-        const nuevaPlanilla = [...planilla];
-        const cliente = nuevaPlanilla[idx];
-
-        cliente[campo] = valor;
-
-        if (campo === "visit_status_c" && valor === "LLESO") {
-
-            const totalVentaHoy = calcularTotalFila(cliente);
-            const deudaPrevia = Number(cliente.total_debt || 0);
-            const amountPaid = Number(cliente.amount_paid || 0);
-            const abonoDeuda = 0; // No se usa abono_deuda en este caso
-            const pagoHoy = amountPaid;
-
-            const nuevoSaldo = deudaPrevia + totalVentaHoy - (pagoHoy + abonoDeuda);
-
-            if (nuevoSaldo <= 0) {
-                // ❌ NO DEBE → eliminar de planilla
-                nuevaPlanilla.splice(idx, 1);
-                setPlanilla(nuevaPlanilla);
-                return;
-            }
-
-            // ✅ SI DEBE → se queda LLESO
-            cliente.visit_status_c = "LLESO";
-        }
-        setPlanilla(nuevaPlanilla);
-    };
-    //--------------------------------------------------------------------------------------------------------------------------------------------
+    // ESTADOS PARA FILTRADO DINÁMICO
+    const [filterID, setFilterID] = useState("");
+    const [filterVendedor, setFilterVendedor] = useState("");
     const ordenesFiltradas = useMemo(() => {
         return pendingOrders.filter(order => {
             if (!order.created_at) return false;
@@ -322,246 +85,92 @@ export default function VentasPage() {
             return coincideDia && coincideID && coincideVendedor;
         });
     }, [pendingOrders, diaSeleccionado, filterID, filterVendedor]); // Agregamos las dependencias aquí
-    //--------------------------------------------------------------------------------------------------------------------------------------------
-    const handleConfirmarTodo = async () => {
-        const ventasRealizadas = planilla.filter(c =>
-            Object.keys(c.productos).length > 0 || c.abono_deuda > 0 || c.status !== "PENDIENTE"
-        );
 
-        if (ventasRealizadas.length === 0) return alertError("Aviso", "No hay movimientos.");
 
+
+
+    const fetchPlanilla = async (userId = user.id, dia) => {
         try {
-            setLoading(true);
-            const payload = {
-                order_id: selectedOrder.id,
-                sales: ventasRealizadas.map(v => ({
-                    customer_id: v.id,
-                    customer_address: v.address,
-                    customer_name: v.name,
-                    customer_phone: v.phone,
-                    visit_status: v.visit_status_c || "PENDIENTE",
-                    total_amount: calcularTotalFila(v),
-                    amount_paid: Number(v.amount_paid) || 0,
-                    credit_amount: Number(v.credit_amount) || 0,
-                    // Asegúrate de enviar solo los productos con cantidad > 0
-                    items: Object.entries(v.productos)
-                        .filter(([_, cant]) => cant > 0)
-                        .map(([id, cant]) => {
-                            const p = orderItems.find(i => i.product_id === parseInt(id));
-                            return {
-                                product_id: p.product_id,
-                                quantity: cant,
-                                unit_price: p.unit_price,
-                                total_price: cant * p.unit_price // <--- ESTO SOLUCIONA EL ERROR 500
-                            };
-                        })
-                }))
-            };
-            await saleService.createSale(payload);
+            // userId debe ser user.id (el vendedor) y dia el nombre del día ("Lunes")
+            const clientesBase = await customerService.getBalances(userId, dia);
 
-
-            // 1. Calculamos qué quedó en el camión
-            const productosSobrantes = orderItems.map(item => ({
-                product_id: item.product_id,
-                product_name: item.product_name,
-                stock_en_camion: item.quantity // Lo que sobró después de vender
-            }));
-
-            alertSuccess("Éxito", "Ventas guardadas. Procediendo a devolución de sobrantes.");
-
-            // 2. Calculamos el total de unidades que quedaron en el camión
-            // productosSobrantes es el array que ya tienes calculado arriba en tu código
-            const totalUnidadesSobrantes = productosSobrantes.reduce((acc, p) => acc + p.stock_en_camion, 0);
-
-            if (totalUnidadesSobrantes === 0) {
-                // --- CASO: VENDIÓ TODO ---
-                // Llamamos a la función que ya tienes en el backend para cerrar la orden
-                await orderService.markAsLiquidated(selectedOrder.id);
-
-                alertSuccess("¡Excelente!", "Venta total completada. La orden se cerró automáticamente.");
-                navigate("/liquidaciones"); // Ir al historial
-            } else {
-                // --- CASO: SOBRÓ MERCANCÍA ---
-                alertSuccess("Éxito", "Ventas guardadas. Procede a devolver el sobrante.");
-                navigate("/devoluciones", {
-                    state: {
-                        orderId: selectedOrder.id,
-                        sobrantes: productosSobrantes
-                    }
-                });
+            if (!clientesBase || clientesBase.length === 0) {
+                console.warn("Atención: No hay clientes en la DB para el día:", dia);
+                return [];
             }
-            alertSuccess("Éxito", "Planilla sincronizada.");
-            setSelectedOrder(null);
-            loadPendingOrders();
-        } catch (err) {
-            console.error(err); // Esto te dirá en la consola el error exacto del servidor
-            alertError("Error", "Error al sincronizar con el servidor.");
-        }
-        finally { setLoading(false); }
-    };
-    //--------------------------------------------------------------------------------------------------------------------------------------------
-    // --- FUNCIONES DE CONTROL DE MODAL PRODUCTOS ---
-    // 1. Manejar cantidad con bloqueo de Stock Máximo
-    const handleCantidadChange = (productId, valor, stockDisponible) => {
-        const numValue = parseInt(valor) || 0;
 
-        if (numValue > stockDisponible) {
-            alertError(`Stock insuficiente. Solo quedan ${stockDisponible} en el camión.`);
-            return; // Bloquea la actualización si supera el stock
-        }
-        updateCantidadVenta(productId, numValue);
-    };
-    //--------------------------------------------------------------------------------------------------------------------------------------------
-    // --- ACTUALIZACIÓN DE PRECIO CORREGIDA ---
-    const updatePrecioVenta = (productId, nuevoPrecio) => {
-        const nuevaPlanilla = [...planilla];
-        if (clienteActualIdx === null) return;
-
-        if (!nuevaPlanilla[clienteActualIdx].preciosPersonalizados) {
-            nuevaPlanilla[clienteActualIdx].preciosPersonalizados = {};
-        }
-
-        nuevaPlanilla[clienteActualIdx].preciosPersonalizados[productId] = nuevoPrecio;
-        setPlanilla(nuevaPlanilla);
-    };
-    //--------------------------------------------------------------------------------------------------------------------------------------------
-    // --- FUNCIÓN PARA GENERAR EL PDF (ADAPTADA A PRECIOS EDITABLES) ---
-    const generarPDFVenta = (cliente) => {
-        const doc = new jsPDF();
-        const totalVenta = calcularTotalFila(cliente);
-
-        // Encabezado
-        doc.setFontSize(18);
-        doc.setFont("helvetica", "bold");
-        doc.text("COMPROBANTE DE VENTA", 105, 20, { align: "center" });
-
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 30);
-        doc.text(`Vendedor: ${selectedOrder.seller_name}`, 20, 35);
-        doc.text(`Cliente: ${cliente.name}`, 20, 45);
-        doc.text(`Dirección: ${cliente.address}`, 20, 50);
-
-        // Tabla de productos
-        const tableRows = [];
-
-        Object.entries(cliente.productos).forEach(([id, cant]) => {
-            if (cant > 0) {
-                const p = orderItems.find(i => i.product_id === parseInt(id));
-
-                // LOGICA CLAVE: Usar el precio personalizado si existe, de lo contrario el unit_price base
-                const precioEfectivo = cliente.preciosPersonalizados?.[id] ?? p.unit_price;
-                const subtotal = cant * precioEfectivo;
-
-                tableRows.push([
-                    p.product_name,
-                    cant,
-                    `$${Number(precioEfectivo).toLocaleString()}`,
-                    `$${subtotal.toLocaleString()}`
-                ]);
-            }
-        });
-
-        autoTable(doc, {
-            startY: 55,
-            head: [['Producto', 'Cant', 'Precio Unit.', 'Subtotal']],
-            body: tableRows,
-            theme: 'striped',
-            headStyles: { fillColor: [190, 43, 72] } // Color guinda para el PDF también
-        });
-
-        const finalY = doc.lastAutoTable.finalY + 10;
-
-        // Resumen de totales
-        doc.setFont("helvetica", "bold");
-        doc.text(`TOTAL VENTA: $${totalVenta.toLocaleString()}`, 140, finalY);
-
-        if (Number(cliente.abono_deuda) > 0) {
-            doc.text(`ABONO RECIBIDO: $${Number(cliente.abono_deuda).toLocaleString()}`, 140, finalY + 7);
-        }
-
-        return doc.output('blob');
-    };
-    //--------------------------------------------------------------------------------------------------------------------------------------------
-    const confirmarVentaModal = () => {
-        // 1. Obtener los datos actuales del cliente y la venta
-        const cliente = planilla[clienteActualIdx];
-        const totalVenta = calcularTotalFila(cliente);
-
-        // 2. ACTUALIZACIÓN DE STOCK DEL CAMIÓN (Punto 3 de tu solicitud)
-        // Descontamos lo vendido de la carga actual del camión
-        const stockActualizado = orderItems.map(item => {
-            const cantidadVendida = cliente.productos[item.product_id] || 0;
-            return {
-                ...item,
-                quantity: Math.max(0, item.quantity - cantidadVendida) // Evita números negativos por si acaso
-            };
-        });
-        setOrderItems(stockActualizado);
-
-        // 3. LÓGICA DEL PDF (Tu lógica original sin romperla)
-        // Verificamos si hubo venta o abono para generar el comprobante
-        if (totalVenta > 0 || Number(cliente.abono_deuda) > 0) {
-            try {
-                // Generamos el PDF con los datos actuales (precios y cantidades nuevas)
-                const pdfBlob = generarPDFVenta(cliente);
-                const pdfUrl = URL.createObjectURL(pdfBlob);
-
-                // Actualizamos la planilla con el link al PDF y marcamos la compra
-                const nuevaPlanilla = [...planilla];
-                nuevaPlanilla[clienteActualIdx].facturaBlob = pdfUrl;
-
-                // Opcional: Podrías marcar aquí que el estado de visita cambió a 'VENDIDO'
-                if (totalVenta > 0) {
-                    nuevaPlanilla[clienteActualIdx].visit_status_c = 'VENDIDO';
-                }
-
-                setPlanilla(nuevaPlanilla);
-                alertSuccess(`Venta de ${cliente.name} procesada y stock descontado.`);
-            } catch (error) {
-                console.error("Error al generar PDF:", error);
-                alertError("La venta se registró pero hubo un error con el PDF.");
-            }
-        } else {
-            alertSuccess("Se cerró el modal sin generar venta.");
-        }
-
-        // 4. Cerrar el modal
-        setShowModal(false);
-    };
-    const fetchPlanilla = async () => {
-        try {
-            setLoading(true);
-            // Usamos el ID del vendedor logueado para traer su ruta
-            const data = await customerService.getBalances(user.id);
-            // ORDENAMOS POR POSITION
-            data.sort((a, b) => Number(a.position) - Number(b.position));
-            // Mapeamos los datos para asegurar que tengan los campos de trabajo del frontend
-            const planillaInicializada = data.map(c => ({
+            const inicializarPlanilla = clientesBase.map(c => ({
                 id: c.id,
-                position: c.position,
-                name: c.name || c.customer_name,
-                address: c.address || c.customer_address,
-                phone: c.phone,
-                total_debt: Number(c.total_debt || 0), // 👈 importante
+                name: c.customer_name, // Nota: tu controller devuelve 'customer_name'
+                address: c.customer_address, // Nota: tu controller devuelve 'customer_address'
+                phone: c.phone || "",
+                visit_status: c.visit_status_c || "PENDIENTE",
+                total_debt: Number(c.total_debt || 0),
+                venta_hoy: 0,
                 productos: {},
                 preciosPersonalizados: {},
-                venta_hoy: 0,
-                pago_hoy: 0,
-                abono_deuda: 0,
-                visit_status_c: c.visit_status_c || "PENDIENTE"
+                position: c.position,
+                visit_day: c.visit_day
             }));
 
-
-            setPlanilla(planillaInicializada);
+            return inicializarPlanilla;
         } catch (err) {
-            console.error("Error al cargar planilla:", err);
-            alertError("Error", "No se pudo actualizar la lista de clientes.");
+            console.error("Error en fetchPlanilla:", err);
+            return [];
+        }
+    };
+    const handleSelectOrder = async (order) => {
+        try {
+            setLoading(true);
+            const items = await orderService.getOrderDetail(order.id);
+            setOrderItems(items);
+
+            const guardado = localStorage.getItem(`planilla_${order.id}`);
+
+            if (guardado && guardado !== "undefined") {
+                setPlanilla(JSON.parse(guardado));
+            } else {
+                // 🚩 SOLUCIÓN: Forzar el nombre del día con tildes correctas
+                // Si order.visit_day viene como "Miercoles", lo corregimos a "Miércoles"
+                let diaDeLaRuta = order.visit_day;
+
+                // Si el backend envía el índice (0-6), usamos el array DIAS_SEMANA
+                if (typeof diaDeLaRuta === 'number') {
+                    diaDeLaRuta = DIAS_SEMANA[diaDeLaRuta];
+                }
+
+                console.log("Día procesado para consulta:", diaDeLaRuta);
+
+                const inicializarPlanilla = await fetchPlanilla(user.id, diaDeLaRuta);
+                setPlanilla(inicializarPlanilla);
+            }
+
+            setSelectedOrder(order);
+        } catch (err) {
+            console.error(err);
+            alertError("Error", "No se pudo cargar la planilla.");
         } finally {
             setLoading(false);
         }
     };
+    // PARTE DE REGISTRO DE NUEVOS CLIENTES
+    const [searchTerm, setSearchTerm] = useState("");
+    const fechaHoy = new Date().toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    });
+    const [newCustomer, setNewCustomer] = useState({
+        name: "",
+        address: "",
+        phone: "",
+        afterCustomerId: "", // Para saber detrás de quién va
+        visit_day: "Lunes",
+        seller_id: "" // Solo lo usará el Admin
+    });
+    const [showModal, setShowModal] = useState(false);
     const handleSaveNewCustomer = async () => {
+
         if (!newCustomer.name || !newCustomer.address) {
             return alertError("Error", "Nombre y dirección son obligatorios");
         }
@@ -594,7 +203,8 @@ export default function VentasPage() {
 
             if (res) {
                 alertSuccess("Éxito", `Cliente agregado en la posición ${posicionFinal}`);
-                setShowAddCustomerModal(false);
+                // Limpiar el formulario
+                setShowModal(false);
                 setNewCustomer({
                     name: "", address: "", phone: "",
                     afterCustomerId: "", visit_day: "Lunes", seller_id: user.id
@@ -608,114 +218,195 @@ export default function VentasPage() {
             setLoading(false);
         }
     };
-    if (loading) return <div className="loading-screen">Cargando...</div>;
+    // Aquí irían las funciones para guardar la ruta, confirmar ventas, etc.
+    const calcularTotalFila = (cliente) => {
+        // 1. Verificación de seguridad
+        if (!cliente || !cliente.productos) return 0;
 
+        return Object.entries(cliente.productos).reduce((sum, [prodId, cant]) => {
+            // 2. Convertir cant a número para evitar errores de string
+            const cantidad = Number(cant) || 0;
+            if (cantidad <= 0) return sum;
+
+            // 3. Buscar el producto en la carga del camión (orderItems)
+            const item = orderItems.find(i => String(i.product_id) === String(prodId));
+
+            // 4. Lógica de Precio: Manual vs Base
+            const precioManual = cliente.preciosPersonalizados?.[prodId];
+            const precioEfectivo = (precioManual !== undefined && precioManual !== "" && precioManual !== null)
+                ? Number(precioManual)
+                : (Number(item?.unit_price) || 0);
+
+            return sum + (cantidad * precioEfectivo);
+        }, 0);
+    };
+    const updateCelda = (idx, campo, valor) => {
+        const nuevaPlanilla = [...planilla];
+        const cliente = nuevaPlanilla[idx];
+
+        cliente[campo] = valor;
+
+        if (campo === "visit_status_c" && valor === "LLESO") {
+
+            const totalVentaHoy = calcularTotalFila(cliente);
+            const deudaPrevia = Number(cliente.total_debt || 0);
+            const amountPaid = Number(cliente.amount_paid || 0);
+            const abonoDeuda = 0; // No se usa abono_deuda en este caso
+            const pagoHoy = amountPaid;
+
+            const nuevoSaldo = deudaPrevia + totalVentaHoy - (pagoHoy + abonoDeuda);
+
+            if (nuevoSaldo <= 0) {
+                // ❌ NO DEBE → eliminar de planilla
+                nuevaPlanilla.splice(idx, 1);
+                setPlanilla(nuevaPlanilla);
+                return;
+            }
+
+            // ✅ SI DEBE → se queda LLESO
+            cliente.visit_status_c = "LLESO";
+        }
+        setPlanilla(nuevaPlanilla);
+        // ✅ PASO NUEVO: Persistir el cambio inmediatamente en el storage
+        // Usamos el ID de la orden seleccionada para saber qué planilla guardar
+        //if (selectedOrder) {
+        //   localStorage.setItem(`planilla_${selectedOrder.id}`, JSON.stringify(nuevaPlanilla));
+        //}
+    };
+
+
+    if (loading) return <div className="loading-screen">Cargando...</div>;
     return (
         <div className="ventas-container">
-            {/* MODAL DE PRODUCTOS */}
-            <ModalProductos
-                show={showModal}
-                onClose={() => setShowModal(false)}
-                cliente={planilla[clienteActualIdx]}
-                orderItems={orderItems}
-                updatePrecioVenta={updatePrecioVenta}
-                handleCantidadChange={handleCantidadChange}
-                confirmarVentaModal={confirmarVentaModal}
-                calcularTotalFila={calcularTotalFila}
-            />
-
 
             {/* MODAL DE REGISTRO DE CLIENTES */}
-            {
-                showAddCustomerModal && (
-                    <div className="modal-overlay">
-                        <div className="modal-content customer-modal">
-                            <div className="modal-header">
-                                <h3>Registrar Nuevo Cliente en Ruta</h3>
-                                <button className="btn-close" onClick={() => setShowAddCustomerModal(false)}><X /></button>
-                            </div>
-                            <form onSubmit={handleSaveNewCustomer}>
-                                <div className="modal-body">
-                                    <div className="form-group">
 
-                                        {/* SOLO ADMIN ve el ID del vendedor */}
+            {showModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content customer-modal-modern">
+                        <div className="modal-header">
+                            <div className="header-title">
+                                <UserPlus size={24} className="icon-header" />
+                                <h2>Registrar Nuevo Cliente</h2>
+                            </div>
+                            <button className="btn-close-modal" onClick={() => setShowModal(false)}>✕</button>
+                        </div>
+
+                        <form onSubmit={handleSaveNewCustomer} className="modal-form">
+                            <div className="modal-body">
+
+                                {/* Sección: Información de Ruta */}
+                                <div className="form-section">
+                                    <p className="section-title">Asignación de Ruta</p>
+                                    <div className="form-grid">
                                         {user.role === 'ADMINISTRADOR' && (
-                                            <input
-                                                type="number"
-                                                placeholder="ID del Vendedor asignado"
-                                                onChange={e => setNewCustomer({ ...newCustomer, seller_id: e.target.value })}
-                                            />
+                                            <div className="form-group">
+                                                <label>ID Vendedor</label>
+                                                <input
+                                                    type="number"
+                                                    placeholder="000"
+                                                    className="form-control"
+                                                    onChange={e => setNewCustomer({ ...newCustomer, seller_id: e.target.value })}
+                                                />
+                                            </div>
                                         )}
+                                        <div className="form-group">
+                                            <label>Día de Visita</label>
+                                            <select
+                                                className="form-select"
+                                                value={newCustomer.visit_day}
+                                                onChange={e => setNewCustomer({ ...newCustomer, visit_day: e.target.value })}
+                                            >
+                                                <option value="Lunes">Lunes</option>
+                                                <option value="Martes">Martes</option>
+                                                <option value="Miércoles">Miércoles</option>
+                                                <option value="Jueves">Jueves</option>
+                                                <option value="Viernes">Viernes</option>
+                                                <option value="Sábado">Sábado</option>
+                                                <option value="Domingo">Domingo</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group mt-3">
+                                        <label>Ubicación en la secuencia</label>
+                                        <select
+                                            className="form-select select-position"
+                                            value={newCustomer.afterCustomerId}
+                                            onChange={(e) => setNewCustomer({ ...newCustomer, afterCustomerId: e.target.value })}
+                                        >
+                                            <option value="">-- Al principio de la ruta --</option>
+                                            {planilla.map((c) => (
+                                                <option key={c.id} value={c.id}>
+                                                    Insertar después de: {c.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <hr className="form-divider" />
+
+                                {/* Sección: Datos Personales */}
+                                <div className="form-section">
+                                    <p className="section-title">Datos del Cliente</p>
+                                    <div className="form-group">
                                         <label>Nombre Completo</label>
                                         <input
                                             required
                                             type="text"
+                                            placeholder="Ej: Juan Pérez"
                                             className="form-control"
                                             value={newCustomer.name}
                                             onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
                                         />
                                     </div>
-                                    {/* Selector de Día */}
-                                    <select value={newCustomer.visit_day} onChange={e => setNewCustomer({ ...newCustomer, visit_day: e.target.value })}>
-                                        <option value="Lunes">Lunes</option>
-                                        <option value="Martes">Martes</option>
-                                        <option value="Miércoles">Miércoles</option>
-                                        <option value="Jueves">Jueves</option>
-                                        <option value="Viernes">Viernes</option>
-                                        <option value="Sábado">Sábado</option>
-                                        <option value="Domingo">Domingo</option>
-                                        {/* ... demás días */}
-                                    </select>
+
                                     <div className="form-group">
-                                        <label>Dirección</label>
+                                        <label>Dirección Exacta</label>
                                         <input
                                             required
                                             type="text"
+                                            placeholder="Calle, Barrio, Referencias..."
                                             className="form-control"
                                             value={newCustomer.address}
                                             onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
                                         />
                                     </div>
+
                                     <div className="form-group">
                                         <label>Teléfono / Celular</label>
                                         <input
                                             type="text"
+                                            placeholder="09xxxxxxx"
                                             className="form-control"
                                             value={newCustomer.phone}
                                             onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                                         />
                                     </div>
                                 </div>
-                                <select
-                                    className="input-modern"
-                                    // CAMBIO: Asegúrate de usar afterCustomerId
-                                    value={newCustomer.afterCustomerId}
-                                    onChange={(e) => setNewCustomer({ ...newCustomer, afterCustomerId: e.target.value })}
+                            </div>
+
+                            <div className="modal-footer">
+                                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn-primary-action"
+                                    disabled={loading}
                                 >
-                                    <option value="">-- Al principio de la ruta --</option>
-                                    {planilla.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            Después de: {c.name}
-                                        </option>
-                                    ))}
-                                </select>
-
-                                <div className="modal-footer">
-                                    <button type="button" className="btn-cancel" onClick={() => setShowAddCustomerModal(false)}>Cancelar</button>
-                                    <button
-                                        type="submit"
-                                        className="btn-save-customer"
-                                        disabled={loading}
-                                    >
-                                        {loading ? "Registrando..." : "Registrar Cliente"}
-                                    </button>
-
-                                </div>
-                            </form>
-                        </div>
+                                    {loading ? (
+                                        <><span className="spinner"></span> Registrando...</>
+                                    ) : (
+                                        "Registrar Cliente"
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                )
-            }
+                </div>
+            )}
             {/* PARTE DE Control de Ventas O  Mis Rutas*/}
             {!selectedOrder ? (
                 <div className="ruta-selection">
@@ -724,6 +415,7 @@ export default function VentasPage() {
                         <p>Selecciona un día para ver los despachos asignados</p>
                     </header>
 
+                    {/* MOSTRAR PANEL DE DIAS*/}
                     <div className="dias-selector-container">
                         {DIAS_SEMANA.map((dia, index) => (
                             <button
@@ -735,6 +427,7 @@ export default function VentasPage() {
                             </button>
                         ))}
                     </div>
+
                     {/* --- SECCIÓN DE FILTROS DINÁMICOS --- */}
                     <div className="filters-card">
                         <div className="filters-grid">
@@ -776,6 +469,8 @@ export default function VentasPage() {
                             )}
                         </div>
                     </div>
+
+                    {/* TABLA PARA VER MIS RUTAS */}
                     <div className="table-wrapper">
                         <table className="ventas-table">
                             <thead>
@@ -822,165 +517,132 @@ export default function VentasPage() {
                             </tbody>
                         </table>
                     </div>
+
                 </div>
-            ) :
+            ) : (
+                <div className="planilla-excel-view">
+                    {/* Detalles de la orden */}
+                    <div className="header-actions">
+                        <div className="header-left">
+                            <button
+                                onClick={() => {
+                                    if (window.confirm("¿Estás seguro de salir? Se perderán los cambios no guardados en esta planilla.")) {
+                                        setSelectedOrder(null);
+                                    }
+                                }}
+                                className="btn-back-list"
+                            >
+                                <ChevronLeft size={20} />
+                                <span>Volver</span>
+                            </button>
 
-                (
-                    <div className="planilla-excel-view">
-                        <div className="header-actions">
-                            <div className="header-left">
-                                <button
-                                    onClick={() => {
-                                        if (window.confirm("¿Estás seguro de salir? Se perderán los cambios no guardados en esta planilla.")) {
-                                            setSelectedOrder(null);
-                                        }
-                                    }}
-                                    className="btn-back-list"
-                                >
-                                    <ChevronLeft size={20} />
-                                    <span>Volver</span>
-                                </button>
-                                {/* --- BUSCADOR AÑADIDO --- */}
-                                <div className="search-container-mini">
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar cliente..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="input-search-planilla"
-                                    />
-                                </div>
-                            </div>
 
-                            <div className="header-center">
-                                <h3 className="ruta-title">Hoja de Ruta: {selectedOrder.seller_name}</h3>
-                                {/* 2. Cambiamos el texto estático por la variable fechaHoy */}
-                                <p className="ruta-subtitle">FECHA: {fechaHoy.toUpperCase()}</p>
-                            </div>
-
-                            <div className="header-right">
-
-                                {/* Botón Nuevo Cliente */}
-                                <button onClick={() => setShowAddCustomerModal(true)} className="btn-add-customer">
-                                    <UserPlus size={20} />
-                                    <span>Nuevo Cliente</span>
-                                </button>
-                                <button onClick={handleConfirmarTodo} className="btn-confirm-all">
-                                    <Save size={20} />
-                                    <span>Guardar Todo</span>
-                                </button>
+                            {/* --- BUSCADOR AÑADIDO --- */}
+                            <div className="search-container-mini">
+                                <input
+                                    type="text"
+                                    placeholder="Buscar cliente..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="input-search-planilla"
+                                />
                             </div>
                         </div>
 
-                        <div className="planilla-wrapper">
-                            <table className="excel-table">
-                                <thead>
-                                    <tr>
-                                        <th>COD</th>
-                                        <th>DIRECCIÓN</th>
-                                        <th>NOMBRE</th>
-                                        <th>ESTADO</th>
-                                        <th>PRODUCTOS</th>
-                                        <th>DEBE</th>
-                                        <th>ABONO</th>
-                                        <th>TOTAL</th>
-                                        <th>FACTURA</th>
-                                        <th>CELULAR</th>
+                        <div className="header-center">
+                            <h3 className="ruta-title">Hoja de Ruta: {selectedOrder.seller_name}</h3>
+                            {/* 2. Cambiamos el texto estático por la variable fechaHoy */}
+                            <p className="ruta-subtitle">FECHA: {fechaHoy.toUpperCase()}</p>
+                        </div>
 
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {/* --- FILTRADO DINÁMICO --- */}
-                                    {planilla
-                                        .map((c, i) => ({ ...c, originalIdx: i })) // Guardamos el índice original para que updateCelda funcione
-                                        .filter(cliente =>
-                                            cliente.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                            cliente.address.toLowerCase().includes(searchTerm.toLowerCase())
-                                        )
-                                        .map((cliente) => {
-                                            const idx = cliente.originalIdx;
+                        <div className="header-right">
 
-                                            // --- 1. CÁLCULOS NUMÉRICOS SEGUROS ---
-                                            const totalVentaHoy = Number(calcularTotalFila(cliente) || 0);
-                                            const deudaPrevia = Number(cliente.total_debt || 0);
-                                            const amountPaid = Number(cliente.amount_paid) || 0;
+                            {/* Botón Nuevo Cliente */}
+                            <button onClick={() => setShowModal(true)} className="btn-add-customer">
+                                <UserPlus size={20} />
+                                <span>Nuevo Cliente</span>
+                            </button>
 
-                                            const nuevoSaldo = deudaPrevia + totalVentaHoy - amountPaid;
-
-
-                                            // --- 3. LÓGICA DE ESTADOS ---
-                                            const visitStatus = cliente.visit_status || '';
-                                            const estadoClase = `fila-${visitStatus.toLowerCase()}`;
-                                            const esLleso = visitStatus === "LLESO";
-
-                                            return (
-                                                <tr key={idx} className={estadoClase}>
-                                                    <td className="code-col">{cliente.position}</td>
-                                                    <td className="address-col">{cliente.address}</td>
-                                                    <td className="name-col">{cliente.name}</td>
-
-                                                    <td>
-                                                        <select
-                                                            value={visitStatus}
-                                                            onChange={(e) => updateCelda(idx, "visit_status", e.target.value)}
-                                                            className="status-select-mini"
-                                                        >
-                                                            <option value=""></option>
-                                                            <option value="PENDIENTE">PENDIENTE</option>
-                                                            <option value="VISITADO">VISITADO</option>
-                                                            <option value="LLESO">LLESO</option>
-                                                        </select>
-                                                    </td>
-
-                                                    <td>
-                                                        <button
-                                                            disabled={esLleso}
-                                                            className={`btn-vender ${totalVentaHoy > 0 ? 'con-venta' : ''}`}
-                                                            onClick={() => abrirModalVenta(idx)}
-                                                        >
-                                                            <ShoppingCart size={14} />
-                                                            {totalVentaHoy > 0 ? ` $${totalVentaHoy.toLocaleString()}` : ' Vender'}
-                                                        </button>
-                                                    </td>
-
-                                                    {/* Mostramos Deuda Previa */}
-                                                    <td>${deudaPrevia.toLocaleString()}</td>
-
-                                                    <td>
-                                                        <input
-                                                            type="number"
-                                                            className="input-celda"
-                                                            value={cliente.amount_paid || ""}
-                                                            disabled={esLleso}
-                                                            placeholder="0"
-                                                            onChange={(e) =>
-                                                                updateCelda(idx, "amount_paid", Number(e.target.value) || 0)
-                                                            }
-                                                        />
-
-                                                    </td>
-
-                                                    {/* CELDA DE NUEVO SALDO (Ahora sí existe la variable) */}
-                                                    <td className={`total-cell ${nuevoSaldo > 0 ? 'deuda' : 'saldo-ok'}`}>
-                                                        ${nuevoSaldo.toLocaleString()}
-                                                    </td>
-
-                                                    <td>
-                                                        {cliente.facturaBlob && (
-                                                            <a href={cliente.facturaBlob} download={`Factura_${cliente.name}.pdf`} className="btn-download-pdf">
-                                                                <FileText size={16} /> PDF
-                                                            </a>
-                                                        )}
-                                                    </td>
-                                                    <td className="name-col">{cliente.phone}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                </tbody>
-                            </table>
+                            {/* Botón guardar la ruta 
+                            <button onClick={handleConfirmarTodo} className="btn-confirm-all">
+                                <Save size={20} />
+                                <span>Guardar Todo</span>
+                            </button> */}
                         </div>
                     </div>
-                )}
+                    <div className="planilla-wrapper">
+                        <table className="excel-table">
+                            <thead>
+                                <tr>
+                                    <th>COD</th>
+                                    <th>DIRECCIÓN</th>
+                                    <th>NOMBRE</th>
+                                    <th>ESTADO</th>
+                                    <th>PRODUCTOS</th>
+                                    <th>DEBE</th>
+                                    <th>ABONO</th>
+                                    <th>TOTAL</th>
+                                    <th>FACTURA</th>
+                                    <th>CELULAR</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {planilla
+                                    .map((c, i) => ({ ...c, originalIdx: i })) // Guardamos el índice original para que updateCelda funcione
+
+                                    // FILTRADO DINÁMICO: Solo mostramos los clientes que coinciden con el término de búsqueda en nombre o dirección
+                                    .filter(cliente =>
+                                        cliente.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        cliente.address.toLowerCase().includes(searchTerm.toLowerCase())
+                                    )
+                                    .map((cliente) => {
+                                        const idx = cliente.originalIdx;
+
+                                        // --- 1. CÁLCULOS ---
+                                        const totalVentaHoy = Number(calcularTotalFila(cliente) || 0);
+                                        const deudaPrevia = Number(cliente.total_debt || 0);
+                                        const amountPaid = Number(cliente.amount_paid) || 0;
+
+                                        const nuevoSaldo = deudaPrevia + totalVentaHoy - amountPaid;
+
+
+                                        // --- 3. LÓGICA DE ESTADOS ---
+                                        const visitStatus = cliente.visit_status || '';
+                                        const estadoClase = `fila-${visitStatus.toLowerCase()}`;
+
+                                        const esLleso = visitStatus === "LLESO";
+
+                                        return (
+                                            <tr key={idx} className={estadoClase}>
+                                                {/* POCICIÒN DEL CLIENTE*/}
+                                                <td className="code-col">{cliente.position}</td>
+
+                                                {/* DIRRECIÒN DE LA PERSONA*/}
+                                                <td>{cliente.address}</td>
+                                                {/* NOMBRE DE LA PERSONA*/}
+                                                <td>{cliente.name}</td>
+                                                {/* ESTADO DE LA VISITA*/}
+                                                <td>
+                                                    <select
+                                                        value={visitStatus}
+                                                        onChange={(e) => updateCelda(idx, "visit_status", e.target.value)}
+                                                        className={`status-select-badge status-${visitStatus.toLowerCase()}`}
+                                                    >
+                                                        <option value="PENDIENTE">PEND</option>
+                                                        <option value="VISITADO">VISIT</option>
+                                                        <option value="LLESO">LLESO</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            )}
         </div>
     );
 }

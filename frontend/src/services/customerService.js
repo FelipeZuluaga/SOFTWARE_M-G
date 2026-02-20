@@ -2,10 +2,17 @@ import api from "./api";
 
 export const customerService = {
 
-    getBalances: async (sellerId) => {
+    getBalances: async (sellerId, visitDay = null) => {
         try {
-            // Pasamos el sellerId como query param
-            const response = await api.get(`/customers/balances?seller_id=${sellerId}`);
+            // 1. Empezamos con el seller_id que es obligatorio
+            let url = `/customers/balances?seller_id=${sellerId}`;
+
+            // 2. Si se proporciona un día, lo concatenamos a la URL
+            if (visitDay) {
+                url += `&visit_day=${visitDay}`;
+            }
+
+            const response = await api.get(url);
             return response.data.data;
         } catch (error) {
             throw error;
