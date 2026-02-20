@@ -25,6 +25,12 @@ export default function VentasPage() {
     const [loading, setLoading] = useState(true);
     const [orderItems, setOrderItems] = useState([]);
     const [planilla, setPlanilla] = useState([]);
+    const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().getDay());
+
+    // ESTADOS PARA FILTRADO DINÁMICO
+    const [filterID, setFilterID] = useState("");
+    const [filterVendedor, setFilterVendedor] = useState("");
 
     const loadPendingOrders = async () => {
         try {
@@ -56,13 +62,7 @@ export default function VentasPage() {
         const savedUser = localStorage.getItem("user");
         return savedUser ? JSON.parse(savedUser) : { id: null, role: 'INVITADO', name: '' };
     }, []);
-    // Para mostrar los días de la semana en el selector
-    const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-    const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().getDay());
 
-    // ESTADOS PARA FILTRADO DINÁMICO
-    const [filterID, setFilterID] = useState("");
-    const [filterVendedor, setFilterVendedor] = useState("");
     const ordenesFiltradas = useMemo(() => {
         return pendingOrders.filter(order => {
             if (!order.created_at) return false;
@@ -86,23 +86,20 @@ export default function VentasPage() {
         });
     }, [pendingOrders, diaSeleccionado, filterID, filterVendedor]); // Agregamos las dependencias aquí
 
-
-
-
-    const fetchPlanilla = async (userId = user.id, dia) => {
+    const fetchPlanilla = async (userId, dia) => {
         try {
-            // userId debe ser user.id (el vendedor) y dia el nombre del día ("Lunes")
+            // Es vital que customerService.getBalances reciba el día para que el Backend filtre
             const clientesBase = await customerService.getBalances(userId, dia);
 
             if (!clientesBase || clientesBase.length === 0) {
-                console.warn("Atención: No hay clientes en la DB para el día:", dia);
+                console.warn("No hay clientes para:", dia);
                 return [];
             }
 
-            const inicializarPlanilla = clientesBase.map(c => ({
+            return clientesBase.map(c => ({
                 id: c.id,
-                name: c.customer_name, // Nota: tu controller devuelve 'customer_name'
-                address: c.customer_address, // Nota: tu controller devuelve 'customer_address'
+                name: c.customer_name,
+                address: c.customer_address,
                 phone: c.phone || "",
                 visit_status: c.visit_status_c || "PENDIENTE",
                 total_debt: Number(c.total_debt || 0),
@@ -112,8 +109,6 @@ export default function VentasPage() {
                 position: c.position,
                 visit_day: c.visit_day
             }));
-
-            return inicializarPlanilla;
         } catch (err) {
             console.error("Error en fetchPlanilla:", err);
             return [];
@@ -130,25 +125,26 @@ export default function VentasPage() {
             if (guardado && guardado !== "undefined") {
                 setPlanilla(JSON.parse(guardado));
             } else {
-                // 🚩 SOLUCIÓN: Forzar el nombre del día con tildes correctas
-                // Si order.visit_day viene como "Miercoles", lo corregimos a "Miércoles"
-                let diaDeLaRuta = order.visit_day;
+                // --- SOLUCIÓN AL UNDEFINED ---
+                // 1. Intentamos sacar el día de la orden. 
+                // 2. Si no existe, usamos el día seleccionado en los botones de arriba (diaSeleccionado)
+                let diaParaFiltrar = order.visit_day || DIAS_SEMANA[diaSeleccionado];
 
-                // Si el backend envía el índice (0-6), usamos el array DIAS_SEMANA
-                if (typeof diaDeLaRuta === 'number') {
-                    diaDeLaRuta = DIAS_SEMANA[diaDeLaRuta];
+                if (typeof diaParaFiltrar === 'number') {
+                    diaParaFiltrar = DIAS_SEMANA[diaParaFiltrar];
                 }
 
-                console.log("Día procesado para consulta:", diaDeLaRuta);
+                console.log("Día recuperado con éxito:", diaParaFiltrar);
 
-                const inicializarPlanilla = await fetchPlanilla(user.id, diaDeLaRuta);
+                // Pasamos el ID del vendedor y el día garantizado
+                const inicializarPlanilla = await fetchPlanilla(order.seller_id || user.id, diaParaFiltrar);
                 setPlanilla(inicializarPlanilla);
             }
 
             setSelectedOrder(order);
         } catch (err) {
-            console.error(err);
-            alertError("Error", "No se pudo cargar la planilla.");
+            console.error("Error al abrir ruta:", err);
+            alertError("Error", "No se pudo cargar la planilla filtrada.");
         } finally {
             setLoading(false);
         }
@@ -170,7 +166,6 @@ export default function VentasPage() {
     });
     const [showModal, setShowModal] = useState(false);
     const handleSaveNewCustomer = async () => {
-
         if (!newCustomer.name || !newCustomer.address) {
             return alertError("Error", "Nombre y dirección son obligatorios");
         }
@@ -179,22 +174,23 @@ export default function VentasPage() {
             setLoading(true);
 
             const idReferencia = newCustomer.afterCustomerId;
-            let posicionFinal = 1; // Por defecto al principio
+            let posicionFinal = 1;
 
             if (idReferencia && idReferencia !== "") {
-                // Buscamos el cliente de referencia en la planilla actual
                 const clientePrevio = planilla.find(c => String(c.id) === String(idReferencia));
                 if (clientePrevio) {
-                    // La nueva posición es la del cliente seleccionado + 1
                     posicionFinal = Number(clientePrevio.position) + 1;
                 }
             }
+
+            // Determinamos el día correcto para la consulta posterior
+            const diaDeLaRuta = newCustomer.visit_day || selectedOrder?.visit_day || "Lunes";
 
             const datosParaEnviar = {
                 name: newCustomer.name.toUpperCase().trim(),
                 address: newCustomer.address.toUpperCase().trim(),
                 phone: newCustomer.phone || "",
-                visit_day: selectedOrder?.visit_day || "Lunes", // Importante que coincida con la ruta actual
+                visit_day: diaDeLaRuta,
                 seller_id: user.id,
                 position: posicionFinal
             };
@@ -203,14 +199,26 @@ export default function VentasPage() {
 
             if (res) {
                 alertSuccess("Éxito", `Cliente agregado en la posición ${posicionFinal}`);
-                // Limpiar el formulario
+
+                // 1. Limpiar el formulario y cerrar modal
                 setShowModal(false);
                 setNewCustomer({
                     name: "", address: "", phone: "",
                     afterCustomerId: "", visit_day: "Lunes", seller_id: user.id
                 });
-                // Recargar la planilla para ver el nuevo orden
-                await fetchPlanilla();
+
+                // 2. RECARGAR LA PLANILLA CORRECTAMENTE
+                // Pasamos el ID del usuario actual y el día que acabamos de usar
+                const planillaActualizada = await fetchPlanilla(user.id, diaDeLaRuta);
+
+                // 3. ACTUALIZAR EL ESTADO PARA QUE SE VEA EN PANTALLA
+                setPlanilla(planillaActualizada);
+
+                // 4. OPCIONAL: Limpiar el localStorage para que la siguiente carga 
+                // no use la versión vieja sin el cliente nuevo
+                if (selectedOrder) {
+                    localStorage.removeItem(`planilla_${selectedOrder.id}`);
+                }
             }
         } catch (err) {
             alertError("Error", err.message || "No se pudo crear el cliente");
@@ -314,15 +322,15 @@ export default function VentasPage() {
                                             <label>Día de Visita</label>
                                             <select
                                                 className="form-select"
-                                                value={newCustomer.visit_day}
+                                                value={newCustomer.visit_day} // Vinculación bidireccional
                                                 onChange={e => setNewCustomer({ ...newCustomer, visit_day: e.target.value })}
                                             >
                                                 <option value="Lunes">Lunes</option>
                                                 <option value="Martes">Martes</option>
-                                                <option value="Miércoles">Miércoles</option>
+                                                <option value="Miércoles">Miércoles</option> {/* Verifica la tilde aquí */}
                                                 <option value="Jueves">Jueves</option>
                                                 <option value="Viernes">Viernes</option>
-                                                <option value="Sábado">Sábado</option>
+                                                <option value="Sábado">Sábado</option>   {/* Verifica la tilde aquí */}
                                                 <option value="Domingo">Domingo</option>
                                             </select>
                                         </div>
