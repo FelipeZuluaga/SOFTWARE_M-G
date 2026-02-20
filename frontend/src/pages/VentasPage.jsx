@@ -17,21 +17,161 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 
+// --- 1. MOVER EL MODAL FUERA DEL COMPONENTE PRINCIPAL ---
+// Esto evita que el input pierda el foco al escribir.
+const ModalProductos = ({
+    show,
+    onClose,
+    cliente,
+    orderItems,
+    updatePrecioVenta,
+    handleCantidadChange,
+    confirmarVentaModal,
+    calcularTotalFila
+}) => {
+    // ESTADO PARA EL BUSCADOR DE PRODUCTOS
+    const [searchTerm, setSearchTerm] = useState("");
+    if (!show || !cliente) return null;
+    // FILTRADO DINÁMICO DE PRODUCTOS
+    const productosFiltrados = orderItems.filter(item =>
+        item.product_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content modal-ventas-xl">
+                <div className="modal-header">
+                    <div className="header-info">
+                        <div className="client-badge">
+                            <span className="client-name">{cliente.name}</span>
+                            <span className="client-address">{cliente.address}</span>
+                        </div>
+                    </div>
+                    {/* --- BUSCADOR DE PRODUCTOS --- */}
+                    <div className="modal-search-wrapper" style={{ margin: '0 20px', flex: 1 }}>
+                        <input
+                            type="text"
+                            placeholder="Buscar producto por nombre..."
+                            className="input-modern"
+                            style={{ width: '100%', maxWidth: '300px' }}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    <button className="btn-close-modal" onClick={onClose}><X /></button>
+                </div>
+
+                <div className="modal-body">
+                    <table className="modal-table-modern">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Stock</th>
+                                <th>Precio Unit.</th>
+                                <th>Cantidad</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {/* USAMOS LA LISTA FILTRADA */}
+                            {productosFiltrados.map((item) => {
+
+                                const cant = cliente.productos[item.product_id] || 0;
+                                const precioVenta = cliente.preciosPersonalizados?.[item.product_id] ?? "";
+                                const stockDisponible = item.quantity;
+                                const tieneVenta = cant > 0;
+
+                                return (
+                                    <tr key={item.product_id} className={tieneVenta ? "row-active" : ""}>
+                                        <td className="prod-name-cell">
+                                            <span className="p-name">{item.product_name}</span>
+                                        </td>
+                                        <td>
+                                            <span className={`stock-pill ${stockDisponible <= 5 ? 'low' : ''}`}>
+                                                {stockDisponible}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                className="input-modern price"
+                                                placeholder="0" // Esto muestra el 0 tenue cuando no hay nada escrito
+                                                value={precioVenta}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === "" || /^[0-9]+$/.test(val)) {
+                                                        updatePrecioVenta(item.product_id, val);
+                                                    }
+                                                }}
+                                                onFocus={(e) => e.target.select()} // OPCIONAL: Selecciona todo al hacer click para sobrescribir rápido
+                                                autoComplete="off"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="number"
+                                                className={`input-modern qty ${cant > stockDisponible ? "error" : ""}`}
+                                                placeholder="0"
+                                                value={cant === 0 ? "" : cant}
+                                                onChange={(e) => handleCantidadChange(item.product_id, e.target.value, stockDisponible)}
+                                            />
+                                        </td>
+                                        <td className={`subtotal-cell ${tieneVenta ? "active-amount" : ""}`}>
+                                            ${(cant * (Number(precioVenta) || 0)).toLocaleString()}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="modal-footer-modern">
+                    <div className="total-container">
+                        <span className="total-label">TOTAL A COBRAR:</span>
+                        <span className="total-amount">${calcularTotalFila(cliente).toLocaleString()}</span>
+                    </div>
+                    <button
+                        className="btn-confirm-final"
+                        onClick={confirmarVentaModal}
+                        disabled={calcularTotalFila(cliente) === 0 && Number(cliente.abono_deuda) === 0}
+                    >
+                        Confirmar Venta y Generar PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
 export default function VentasPage() {
-
     const [selectedOrder, setSelectedOrder] = useState(null);
-
     const [pendingOrders, setPendingOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [orderItems, setOrderItems] = useState([]);
     const [planilla, setPlanilla] = useState([]);
     const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const [diaSeleccionado, setDiaSeleccionado] = useState(new Date().getDay());
-
     // ESTADOS PARA FILTRADO DINÁMICO
     const [filterID, setFilterID] = useState("");
     const [filterVendedor, setFilterVendedor] = useState("");
-
+    const [searchTerm, setSearchTerm] = useState("");
+    const [showModalProductos, setShowModalProductos] = useState(false); // Para el modal de ventas
+    const navigate = useNavigate(); // Inicializar el hook
+    const [clienteActualIdx, setClienteActualIdx] = useState(null);
+    const fechaHoy = new Date().toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    });
+    const [newCustomer, setNewCustomer] = useState({
+        name: "",
+        address: "",
+        phone: "",
+        afterCustomerId: "", // Para saber detrás de quién va
+        visit_day: "Lunes",
+        seller_id: "" // Solo lo usará el Admin
+    });
+    const [showModal, setShowModal] = useState(false);
     const loadPendingOrders = async () => {
         try {
             setLoading(true);
@@ -41,7 +181,6 @@ export default function VentasPage() {
         } catch (err) { alertError("Error", "No se cargaron los despachos."); }
         finally { setLoading(false); }
     };
-
     // 1. Efecto para cargar las órdenes al inicio (Ya lo tienes)
     useEffect(() => {
         loadPendingOrders();
@@ -55,7 +194,6 @@ export default function VentasPage() {
             console.log("Cambios guardados en local.");
         }
     }, [planilla, selectedOrder]); // Se ejecuta cada vez que 'planilla' o 'selectedOrder' cambien
-
     //PARA CONTROL PARA PERMISOS SEGUN EL TIPO DE ROL DE USUARIO
     // Por esto:
     const user = useMemo(() => {
@@ -85,7 +223,6 @@ export default function VentasPage() {
             return coincideDia && coincideID && coincideVendedor;
         });
     }, [pendingOrders, diaSeleccionado, filterID, filterVendedor]); // Agregamos las dependencias aquí
-
     const fetchPlanilla = async (userId, dia) => {
         try {
             // Es vital que customerService.getBalances reciba el día para que el Backend filtre
@@ -150,21 +287,6 @@ export default function VentasPage() {
         }
     };
     // PARTE DE REGISTRO DE NUEVOS CLIENTES
-    const [searchTerm, setSearchTerm] = useState("");
-    const fechaHoy = new Date().toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-    });
-    const [newCustomer, setNewCustomer] = useState({
-        name: "",
-        address: "",
-        phone: "",
-        afterCustomerId: "", // Para saber detrás de quién va
-        visit_day: "Lunes",
-        seller_id: "" // Solo lo usará el Admin
-    });
-    const [showModal, setShowModal] = useState(false);
     const handleSaveNewCustomer = async () => {
         if (!newCustomer.name || !newCustomer.address) {
             return alertError("Error", "Nombre y dirección son obligatorios");
@@ -281,14 +403,160 @@ export default function VentasPage() {
         //   localStorage.setItem(`planilla_${selectedOrder.id}`, JSON.stringify(nuevaPlanilla));
         //}
     };
+    // --- LÓGICA DE MODAL Y VENTAS ---
+    const abrirModalVenta = (idx) => {
+        setClienteActualIdx(idx);
+        setShowModalProductos(true);
+    };
+
+    const updatePrecioVenta = (prodId, nuevoPrecio) => {
+        const nuevaPlanilla = [...planilla];
+        if (clienteActualIdx !== null) {
+            nuevaPlanilla[clienteActualIdx].preciosPersonalizados[prodId] = nuevoPrecio;
+            setPlanilla(nuevaPlanilla);
+        }
+    };
 
 
+    const handleCantidadChange = (prodId, valor, stockDisponible) => {
+        const cant = parseInt(valor) || 0;
+        if (cant > stockDisponible) {
+            alertError("Sin Stock", `Solo hay ${stockDisponible} unidades.`);
+            return;
+        }
+        const nuevaPlanilla = [...planilla];
+        nuevaPlanilla[clienteActualIdx].productos[prodId] = cant;
+        setPlanilla(nuevaPlanilla);
+        const confirmarVentaModal = () => {
+            // Aquí puedes agregar la lógica para cerrar y guardar
+            alertSuccess("Venta preparada", "Se han registrado los productos temporalmente.");
+            setShowModal(false);
+        };
+    };
+    // --- FUNCIÓN PARA GENERAR EL PDF (ADAPTADA A PRECIOS EDITABLES) ---
+    const generarPDFVenta = (cliente) => {
+        const doc = new jsPDF();
+        const totalVenta = calcularTotalFila(cliente);
+
+        // Encabezado
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.text("COMPROBANTE DE VENTA", 105, 20, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 30);
+        doc.text(`Vendedor: ${selectedOrder.seller_name}`, 20, 35);
+        doc.text(`Cliente: ${cliente.name}`, 20, 45);
+        doc.text(`Dirección: ${cliente.address}`, 20, 50);
+
+        // Tabla de productos
+        const tableRows = [];
+
+        Object.entries(cliente.productos).forEach(([id, cant]) => {
+            if (cant > 0) {
+                const p = orderItems.find(i => i.product_id === parseInt(id));
+
+                // LOGICA CLAVE: Usar el precio personalizado si existe, de lo contrario el unit_price base
+                const precioEfectivo = cliente.preciosPersonalizados?.[id] ?? p.unit_price;
+                const subtotal = cant * precioEfectivo;
+
+                tableRows.push([
+                    p.product_name,
+                    cant,
+                    `$${Number(precioEfectivo).toLocaleString()}`,
+                    `$${subtotal.toLocaleString()}`
+                ]);
+            }
+        });
+
+        autoTable(doc, {
+            startY: 55,
+            head: [['Producto', 'Cant', 'Precio Unit.', 'Subtotal']],
+            body: tableRows,
+            theme: 'striped',
+            headStyles: { fillColor: [190, 43, 72] } // Color guinda para el PDF también
+        });
+
+        const finalY = doc.lastAutoTable.finalY + 10;
+
+        // Resumen de totales
+        doc.setFont("helvetica", "bold");
+        doc.text(`TOTAL VENTA: $${totalVenta.toLocaleString()}`, 140, finalY);
+
+        if (Number(cliente.abono_deuda) > 0) {
+            doc.text(`ABONO RECIBIDO: $${Number(cliente.abono_deuda).toLocaleString()}`, 140, finalY + 7);
+        }
+
+        return doc.output('blob');
+    };
+    const confirmarVentaModal = () => {
+        // 1. Obtener los datos actuales del cliente y la venta
+        const cliente = planilla[clienteActualIdx];
+        const totalVenta = calcularTotalFila(cliente);
+
+        // 2. ACTUALIZACIÓN DE STOCK DEL CAMIÓN (Punto 3 de tu solicitud)
+        // Descontamos lo vendido de la carga actual del camión
+        const stockActualizado = orderItems.map(item => {
+            const cantidadVendida = cliente.productos[item.product_id] || 0;
+            return {
+                ...item,
+                quantity: Math.max(0, item.quantity - cantidadVendida) // Evita números negativos por si acaso
+            };
+        });
+        setOrderItems(stockActualizado);
+
+        // 3. LÓGICA DEL PDF (Tu lógica original sin romperla)
+        // Verificamos si hubo venta o abono para generar el comprobante
+        if (totalVenta > 0 || Number(cliente.abono_deuda) > 0) {
+            try {
+                // Generamos el PDF con los datos actuales (precios y cantidades nuevas)
+                const pdfBlob = generarPDFVenta(cliente);
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+
+                // Actualizamos la planilla con el link al PDF y marcamos la compra
+                const nuevaPlanilla = [...planilla];
+                nuevaPlanilla[clienteActualIdx].facturaBlob = pdfUrl;
+
+                // Opcional: Podrías marcar aquí que el estado de visita cambió a 'VENDIDO'
+                if (totalVenta > 0) {
+                    nuevaPlanilla[clienteActualIdx].visit_status_c = 'VENDIDO';
+                }
+
+                setPlanilla(nuevaPlanilla);
+                alertSuccess(`Venta de ${cliente.name} procesada y stock descontado.`);
+            } catch (error) {
+                console.error("Error al generar PDF:", error);
+                alertError("La venta se registró pero hubo un error con el PDF.");
+            }
+        } else {
+            alertSuccess("Se cerró el modal sin generar venta.");
+        }
+
+        // 4. Cerrar el modal
+        setShowModal(false);
+    }
     if (loading) return <div className="loading-screen">Cargando...</div>;
     return (
         <div className="ventas-container">
-
+            {/* MODAL DE PRODUCTOS */}
+            {/* MODAL DE PRODUCTOS - Solo se muestra si hay un cliente seleccionado */}
+            {showModalProductos && clienteActualIdx !== null && (
+                <ModalProductos
+                    show={showModalProductos}
+                    onClose={() => {
+                        setShowModalProductos(false);
+                        setClienteActualIdx(null);
+                    }}
+                    cliente={planilla[clienteActualIdx]}
+                    orderItems={orderItems}
+                    updatePrecioVenta={updatePrecioVenta}
+                    handleCantidadChange={handleCantidadChange}
+                    confirmarVentaModal={confirmarVentaModal}
+                    calcularTotalFila={calcularTotalFila}
+                />
+            )}
             {/* MODAL DE REGISTRO DE CLIENTES */}
-
             {showModal && (
                 <div className="modal-overlay">
                     <div className="modal-content customer-modal-modern">
@@ -300,7 +568,7 @@ export default function VentasPage() {
                             <button className="btn-close-modal" onClick={() => setShowModal(false)}>✕</button>
                         </div>
 
-                        <form onSubmit={handleSaveNewCustomer} className="modal-form">
+                        <form onSubmit={handleSaveNewCustomer} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                             <div className="modal-body">
 
                                 {/* Sección: Información de Ruta */}
@@ -534,9 +802,7 @@ export default function VentasPage() {
                         <div className="header-left">
                             <button
                                 onClick={() => {
-                                    if (window.confirm("¿Estás seguro de salir? Se perderán los cambios no guardados en esta planilla.")) {
-                                        setSelectedOrder(null);
-                                    }
+                                    setSelectedOrder(null);
                                 }}
                                 className="btn-back-list"
                             >
@@ -575,7 +841,7 @@ export default function VentasPage() {
                             <button onClick={handleConfirmarTodo} className="btn-confirm-all">
                                 <Save size={20} />
                                 <span>Guardar Todo</span>
-                            </button> */}
+                            </button>*/}
                         </div>
                     </div>
                     <div className="planilla-wrapper">
@@ -641,6 +907,45 @@ export default function VentasPage() {
                                                         <option value="LLESO">LLESO</option>
                                                     </select>
                                                 </td>
+                                                {/* PRODUCTOS COMPRADOS HOY*/}
+                                                <td>
+                                                    <button
+                                                        disabled={esLleso}
+                                                        className={`btn-vender ${totalVentaHoy > 0 ? 'con-venta' : ''}`}
+                                                        onClick={() => abrirModalVenta(idx)}
+                                                    >
+                                                        <ShoppingCart size={14} />
+                                                        {totalVentaHoy > 0 ? ` $${totalVentaHoy.toLocaleString()}` : ' Vender'}
+                                                    </button>
+                                                </td>
+                                                {/* Mostramos Deuda Previa */}
+                                                <td>${deudaPrevia.toLocaleString()}</td>
+                                                {/* ABONO RECIBIDO*/}
+                                                <td>
+                                                    <input
+                                                        type="number"
+                                                        className="input-celda"
+                                                        value={cliente.amount_paid || ""}
+                                                        disabled={esLleso}
+                                                        placeholder="0"
+                                                        onChange={(e) =>
+                                                            updateCelda(idx, "amount_paid", Number(e.target.value) || 0)
+                                                        }
+                                                    />
+                                                </td>
+                                                {/* CELDA DE NUEVO SALDO (Ahora sí existe la variable) */}
+                                                <td className={`total-cell ${nuevoSaldo > 0 ? 'deuda' : 'saldo-ok'}`}>
+                                                    ${nuevoSaldo.toLocaleString()}
+                                                </td>
+
+                                                <td>
+                                                    {cliente.facturaBlob && (
+                                                        <a href={cliente.facturaBlob} download={`Factura_${cliente.name}.pdf`} className="btn-download-pdf">
+                                                            <FileText size={16} /> PDF
+                                                        </a>
+                                                    )}
+                                                </td>
+                                                <td className="name-col">{cliente.phone}</td>
                                             </tr>
                                         );
                                     })

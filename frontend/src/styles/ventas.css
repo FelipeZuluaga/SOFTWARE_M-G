@@ -176,18 +176,19 @@
     background: #f0fdf4;
 }
 
-/* Modal Estilos */
+/* El fondo oscuro que cubre toda la pantalla */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 9999;
+    padding: 20px; /* Evita que el modal toque los bordes físicos */
 }
 
 .modal-content {
@@ -996,14 +997,30 @@ input::-webkit-inner-spin-button {
 }
 
 
-/* Contenedor Principal del Modal */
+/* El contenedor del modal */
 .customer-modal-modern {
-    max-width: 500px;
-    width: 95%;
-    border-radius: 20px;
-    background: #ffffff;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    overflow: hidden;
+    background: white;
+    width: 100%;
+    max-width: 550px;
+    
+    /* SOLUCIÓN AL ZOOM: */
+    max-height: 90vh; /* El modal nunca medirá más del 90% de la altura de la pantalla */
+    display: flex;
+    flex-direction: column; /* Organiza header, body y footer en vertical */
+    border-radius: 8px;
+    overflow: hidden; /* Corta lo que sobresalga para que el scroll sea interno */
+}
+/* El cuerpo del formulario (donde están los inputs) */
+.modal-body {
+    padding: 24px;
+    overflow-y: auto; /* ESTA ES LA CLAVE: Activa el scroll solo aquí */
+    flex: 1; /* Empuja el footer hacia abajo */
+}
+/* Asegura que el header y footer se queden quietos */
+.modal-header, .modal-footer {
+    flex-shrink: 0; /* No permite que se compriman */
+    padding: 16px 24px;
+    background: white;
 }
 
 /* Encabezado */
@@ -1065,10 +1082,13 @@ input::-webkit-inner-spin-button {
 
 .form-grid {
     display: grid;
-    /* Esto ajusta las columnas automáticamente según el espacio y cantidad de items */
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
+}
+/* Asegurar que las imágenes o inputs no desborden */
+.form-control, .form-select {
     width: 100%;
+    box-sizing: border-box;
 }
 
 /* Botones */
