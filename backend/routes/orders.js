@@ -30,5 +30,8 @@ router.post('/process-return', orderController.processReturn);
 router.get('/return-history/:orderId', orderController.getReturnHistory);
 router.get('/truck-inventory/:orderId', orderController.getTruckInventory);
 router.post('/mark-liquidated/:orderId', orderController.markAsLiquidated);
+// ESTA ES LA NUEVA RUTA PARA LA LIQUIDACIÓN MONETARIA (RUTA 1, 2 Y 3)
+router.post('/settle/:orderId', orderController.settleOrder);
+
 
 module.exports = router;

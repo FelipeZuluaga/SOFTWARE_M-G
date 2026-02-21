@@ -359,6 +359,72 @@ const markAsLiquidated = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
+
+// --- LIQUIDACIÓN DE TODO (MODULO DE LIQUIDACIÓN) ---
+// En orderController.js, actualiza la función de liquidación:
+
+const settleOrder = async (req, res) => {
+    const { orderId } = req.params;
+    // Si no hay body, asumimos que solo es una CONSULTA de datos
+    const { efectivoEntregado, costoProducto } = req.body || {}; 
+
+    try {
+        // 1. RECAUDO TOTAL DEL SISTEMA Y VENTAS
+        const [cashData] = await db.query(`
+            SELECT IFNULL(SUM(amount_paid), 0) as total_recaudado,
+                   IFNULL(SUM(total_amount), 0) as ventas_totales_hoy
+            FROM sales WHERE order_id = ?
+        `, [orderId]);
+
+        // 2. CARTERA ANTERIOR (Opcional pero recomendado para tu resumen)
+        const [carteraData] = await db.query(`
+            SELECT IFNULL(SUM(total_debt), 0) as cartera_anterior 
+            FROM customers 
+            WHERE id IN (SELECT DISTINCT customer_id FROM sales WHERE order_id = ?)
+        `, [orderId]);
+
+        // 3. VALOR DE LAS DEVOLUCIONES
+        const [devolucionesData] = await db.query(`
+            SELECT IFNULL(SUM(r.quantity * oi.unit_price), 0) AS valor_devoluciones
+            FROM order_returns r 
+            JOIN order_items oi ON r.order_id = oi.order_id AND r.product_id = oi.product_id 
+            WHERE r.order_id = ?`, [orderId]);
+
+        // 4. SI SOLO ES CONSULTA (GET o Body vacío)
+        if (!efectivoEntregado) {
+            return res.json({
+                total_recaudado: cashData[0].total_recaudado,
+                ventas_totales_hoy: cashData[0].ventas_totales_hoy,
+                cartera_anterior: carteraData[0].cartera_anterior,
+                valor_devoluciones: devolucionesData[0].valor_devoluciones
+            });
+        }
+
+        // 5. SI ES EL CIERRE (Lógica que ya tenías)
+        const totalRecaudadoSistema = parseFloat(cashData[0].total_recaudado);
+        const faltante = totalRecaudadoSistema - parseFloat(efectivoEntregado);
+        
+        const [orderData] = await db.query("SELECT total_amount FROM orders WHERE id = ?", [orderId]);
+        const ventaNetaCosto = parseFloat(orderData[0].total_amount) - parseFloat(devolucionesData[0].valor_devoluciones);
+        const utilidadTotal = ventaNetaCosto - parseFloat(costoProducto);
+
+        let comisionVendedor = utilidadTotal * 0.5;
+        if (faltante > 0) comisionVendedor -= faltante;
+
+        await db.query("UPDATE orders SET status = 'LIQUIDADA' WHERE id = ?", [orderId]);
+
+        res.json({
+            success: true,
+            data: { comision_vendedor: comisionVendedor, faltante }
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     createOrder,
     getOrdersByRole,
@@ -368,5 +434,6 @@ module.exports = {
     updateOrderItems,
     getReturnHistory,
     getTruckInventory,
-    markAsLiquidated
+    markAsLiquidated,
+    settleOrder
 };

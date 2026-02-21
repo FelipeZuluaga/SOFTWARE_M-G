@@ -1,100 +1,63 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom"; // <--- IMPORTACIÓN FALTANTE
+import { useLocation, useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
-import { saleService } from "../services/saleService";
 import { alertSuccess, alertError } from "../services/alertService";
-import { ChevronLeft, Save } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 export default function DevolucionesPage() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Extraemos los datos enviados desde VentasPage vía navigate
     const { orderId, sobrantes } = location.state || {};
 
-    // ESTADOS NECESARIOS
     const [itemsDevolver, setItemsDevolver] = useState([]);
-    const [loading, setLoading] = useState(true); // <--- SOLUCIONA EL ERROR DE LA IMAGEN
-    const [itemsCargados, setItemsCargados] = useState([]); // <--- PARA LA CARGA MANUAL
+    const [loading, setLoading] = useState(true);
     const [esHistorial, setEsHistorial] = useState(false);
 
     useEffect(() => {
         if (!orderId) {
             alertError("Error", "No hay una orden seleccionada.");
+            navigate("/liquidaciones");
             return;
         }
 
-        // PRIORIDAD: Siempre intentar cargar desde la DB primero para ver si hay historial
         const inicializarPagina = async () => {
             setLoading(true);
-
-            // 1. Intentamos traer historial de la DB
-            const historial = await orderService.getReturnHistory(orderId);
-            console.log("Historial recibido:", historial); // <--- DEBUG
-            if (historial && historial.length > 0) {
-                // SI HAY HISTORIAL: Lo mostramos y bloqueamos edición
-                setItemsDevolver(historial.map(h => ({
-                    product_id: h.product_id,
-                    product_name: h.product_name,
-                    stock_en_sistema: h.cantidad_devuelta,
-                    cantidad_a_devolver: h.cantidad_devuelta,
-                    ya_procesado: true
-                })));
-                setEsHistorial(true);
+            try {
+                // 1. Intentamos traer historial de la DB
+                const historial = await orderService.getReturnHistory(orderId);
+                
+                if (historial && historial.length > 0) {
+                    setItemsDevolver(historial.map(h => ({
+                        product_id: h.product_id,
+                        product_name: h.product_name,
+                        stock_en_sistema: h.cantidad_devuelta,
+                        cantidad_a_devolver: h.cantidad_devuelta,
+                    })));
+                    setEsHistorial(true);
+                } 
+                // 2. Si no hay historial, cargamos lo que viene de Ventas o calculamos del camión
+                else {
+                    const stockCalculado = sobrantes || await orderService.getTruckInventory(orderId);
+                    
+                    setItemsDevolver(stockCalculado.map(item => ({
+                        product_id: item.product_id,
+                        product_name: item.product_name,
+                        stock_en_sistema: item.cantidad_sobrante || item.stock_en_camion,
+                        cantidad_a_devolver: item.cantidad_sobrante || item.stock_en_camion
+                    })));
+                    setEsHistorial(false);
+                }
+            } catch (err) {
+                alertError("Error", "No se pudieron cargar los datos de inventario.");
+            } finally {
                 setLoading(false);
-            }
-            // 2. SI NO HAY HISTORIAL pero tenemos datos frescos de VentasPage
-            else if (sobrantes && sobrantes.length > 0) {
-                setItemsDevolver(sobrantes.map(item => ({
-                    product_id: item.product_id,
-                    product_name: item.product_name,
-                    // Usar stock_en_camion (del navigate) o cantidad_sobrante (del backend)
-                    cantidad_a_devolver: item.stock_en_camion || item.cantidad_sobrante,
-                    stock_en_sistema: item.stock_en_camion || item.cantidad_sobrante
-                })));
-                setEsHistorial(false);
-                setLoading(false);
-            }
-            else if (sobrantes) {
-                console.log("Sobrantes recibidos de navegación:", sobrantes); // <--- DEBUG
-                // ... logic
-            }
-            // 3. SI NO HAY NADA: Cargamos el detalle original (por si acaso)
-            else {
-                await cargarDatosLiquidacion();
             }
         };
 
         inicializarPagina();
-    }, [orderId, sobrantes]);
+    }, [orderId, sobrantes, navigate]);
 
-    const cargarDatosLiquidacion = async () => {
-        try {
-            setLoading(true);
-
-            // 1. Verificamos si YA se hizo la devolución antes (historial)
-            const historial = await orderService.getReturnHistory(orderId);
-
-            if (historial && historial.length > 0) {
-                // ... (tu lógica de historial que ya funciona)
-            } else {
-                // 2. SI ES NUEVA: Llamamos a la nueva función que calcula la resta
-                // Debes crear este método en orderService.js que llame a /orders/truck-inventory/:id
-                const stockCalculado = await orderService.getTruckInventory(orderId);
-
-                setItemsDevolver(stockCalculado.map(item => ({
-                    product_id: item.product_id,
-                    product_name: item.product_name,
-                    stock_en_sistema: item.cantidad_sobrante, // La resta de despacho - ventas
-                    cantidad_a_devolver: item.cantidad_sobrante
-                })));
-            }
-        } catch (err) {
-            alertError("Error", "No se pudo calcular el sobrante del camión.");
-        } finally {
-            setLoading(false);
-        }
-    };
     const handleCantidadChange = (id, valor) => {
         const nuevaLista = itemsDevolver.map(item => {
             if (item.product_id === id) {
@@ -105,23 +68,31 @@ export default function DevolucionesPage() {
         setItemsDevolver(nuevaLista);
     };
 
-    const confirmarDevolucion = async () => {
+    // FUNCIÓN UNIFICADA: Procesa devolución O salta a liquidación
+    const handleAccionPrincipal = async () => {
+        if (esHistorial) {
+            // Si ya se hizo, solo navegamos a la liquidación financiera
+            navigate(`/liquidacion-ruta/${orderId}`);
+            return;
+        }
+
         try {
             const payload = {
                 order_id: orderId,
                 items: itemsDevolver.filter(i => i.cantidad_a_devolver > 0)
             };
 
-            // Asegúrate de que saleService o orderService tengan processReturn definido
             await orderService.processReturn(payload);
             alertSuccess("Éxito", "El stock ha sido reintegrado al almacén.");
-            navigate("/liquidaciones");
+            
+            // Una vez procesada la devolución física, vamos a la liquidación de dinero
+            navigate(`/liquidacion-ruta/${orderId}`);
         } catch (err) {
             alertError("Error", "No se pudo procesar la devolución.");
         }
     };
 
-    if (loading) return <div className="loading-screen">Cargando sobrantes...</div>;
+    if (loading) return <div className="loading-screen">Cargando inventario...</div>;
 
     return (
         <div className="devoluciones-container">
@@ -130,12 +101,12 @@ export default function DevolucionesPage() {
                     <ChevronLeft size={20} /> Volver
                 </button>
                 <h2 className="ruta-title">Liquidación de Inventario - Despacho #{orderId}</h2>
+                
                 <button
-                    onClick={confirmarDevolucion}
-                    className="btn-confirm-all"
-                    disabled={esHistorial} // Se deshabilita si ya estamos viendo un historial
+                    onClick={handleAccionPrincipal}
+                    className={`btn-confirm-all ${esHistorial ? 'btn-history' : ''}`}
                 >
-                    {esHistorial ? "Ya Se hizo la devoluciòn" : "Procesar Devoluciòn"}
+                    {esHistorial ? "Siguiente: Liquidar Dinero" : "Confirmar Devolución"}
                 </button>
             </header>
 
@@ -160,15 +131,13 @@ export default function DevolucionesPage() {
                                         className="input-modern"
                                         value={item.cantidad_a_devolver}
                                         onChange={(e) => handleCantidadChange(item.product_id, e.target.value)}
-                                        // AÑADE ESTO PARA BLOQUEAR LA EDICIÓN:
                                         disabled={esHistorial}
-                                        // Opcional: añade un estilo visual de bloqueo
                                         style={esHistorial ? { backgroundColor: '#f5f5f5', cursor: 'not-allowed', border: 'none' } : {}}
                                     />
                                 </td>
                                 <td>
                                     {item.cantidad_a_devolver === item.stock_en_sistema ?
-                                        <span className="badge-ok">TODO ENTREGADO</span> :
+                                        <span className="badge-ok">CORRECTO</span> :
                                         <span className="badge-warning">DESCUADRE</span>
                                     }
                                 </td>
@@ -177,6 +146,12 @@ export default function DevolucionesPage() {
                     </tbody>
                 </table>
             </div>
+            
+            {esHistorial && (
+                <div className="alert-info-history">
+                    * Esta devolución ya fue procesada. Haga clic en el botón superior para realizar el cierre económico.
+                </div>
+            )}
         </div>
     );
 }

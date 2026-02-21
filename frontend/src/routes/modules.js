@@ -12,7 +12,7 @@ export const modulesByRole = {
         { title: "Informe y proceso de Devolucion", path: "/liquidaciones", iconName: "RotateCcw" },
 
 
-        { title: "Liquidación", path: "/liquidacion", iconName: "Calculator" },
+        { title: "Liquidación", path: "/liquidacion-ruta", iconName: "Calculator" },
         { title: "Pagos", path: "/pagos", iconName: "Wallet" },
     ],
     DESPACHADOR: [
