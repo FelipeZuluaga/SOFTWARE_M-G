@@ -128,7 +128,7 @@ const getRutaCompleta = async (req, res) => {
                 c.address AS direccion,
                 s.visit_status AS estado,
                 s.total_amount AS venta,
-                s.amount_paid AS pago_total,
+                s.amount_paid AS abono,
                 c.phone AS telefono
             FROM sales s
             JOIN customers c ON s.customer_id = c.id

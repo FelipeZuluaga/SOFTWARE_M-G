@@ -1,0 +1,103 @@
+/* Contenedor Principal */
+.history-container {
+    padding: 20px;
+}
+
+.ruta-header-main h1 {
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+}
+
+/* Selector de Días */
+.dias-selector-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-dia {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #ca1b1b;
+    cursor: pointer;
+    background-color: white;
+    color: #b8262b;
+    transition: all 0.3s ease;
+}
+
+.btn-dia.selected {
+    background-color: #bf3030;
+    color: white;
+}
+
+.btn-dia:hover:not(.selected) {
+    background-color: #fff1f1;
+}
+
+/* Barra de Filtros */
+.filters-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.filters-group-left {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+}
+
+.admin-select-vendedor {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    outline: none;
+    min-width: 180px;
+    background-color: white;
+}
+
+.btn-clear-filters {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #64748b;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-clear-filters:hover {
+    background-color: #475569;
+}
+
+/* Tabla y Botones */
+.btn-ver-detalle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #e51d48;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 0 auto;
+    transition: opacity 0.2s;
+}
+
+.btn-ver-detalle:hover {
+    opacity: 0.9;
+}
+
+.no-results-row {
+    text-align: center;
+    padding: 20px;
+    color: #d1343c;
+    font-style: italic;
+}

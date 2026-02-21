@@ -6,8 +6,8 @@ export const modulesByRole = {
         { title: "Informe de rutas cargadas", path: "/pedidos", iconName: "ClipboardList" },
 
         // --- MEJORADO PARA ADMIN ---
-        { title: "Generar una venta", path: "/ventas", iconName: "LayoutDashboard" },
-        { title: "Informe de ventas", path: "/historial-ventas", iconName: "BarChart3" },
+        { title: "Rutas", path: "/ventas", iconName: "LayoutDashboard" },
+        { title: "Informe de rutas", path: "/historial-ventas", iconName: "BarChart3" },
         { title: "Devoluciones", path: "/liquidaciones", iconName: "RefreshCcw" },
 
         { title: "Liquidación", path: "/liquidacion", iconName: "Calculator" },
@@ -20,12 +20,12 @@ export const modulesByRole = {
     ],
     SOCIO: [
         { title: "Mis Rutas Cargadas", path: "/ventas", iconName: "Navigation" },
-        { title: "Mis Clientes", path: "/historial-ventas", iconName: "TrendingUp" },
+        { title: "Informe de mis rutas", path: "/historial-ventas", iconName: "TrendingUp" },
         { title: "Hacer Devoluciones", path: "/devoluciones", iconName: "RotateCcw" },
     ],
     NO_SOCIO: [
         { title: "Mis Rutas Cargadas", path: "/ventas", iconName: "Navigation" },
-        { title: "Mis Clientes", path: "/historial-ventas", iconName: "TrendingUp" },
+        { title: "Informe de mis rutas", path: "/historial-ventas", iconName: "TrendingUp" },
         { title: "Hacer Devoluciones", path: "/devoluciones", iconName: "RotateCcw" },
     ]
 };

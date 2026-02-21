@@ -619,7 +619,6 @@ export default function VentasPage() {
     if (loading) return <div className="loading-screen">Cargando...</div>;
     return (
         <div className="ventas-container">
-            {/* MODAL DE PRODUCTOS */}
             {/* MODAL DE PRODUCTOS - Solo se muestra si hay un cliente seleccionado */}
             {showModalProductos && clienteActualIdx !== null && (
                 <ModalProductos
@@ -767,8 +766,8 @@ export default function VentasPage() {
             {!selectedOrder ? (
                 <div className="ruta-selection">
                     <header className="ruta-header-main">
-                        <h1>{user.role === 'ADMINISTRADOR' ? '🚀 Control de Ventas' : '🚚 Mis Rutas'}</h1>
-                        <p>Selecciona un día para ver los despachos asignados</p>
+                        <h1>{user.role === 'ADMINISTRADOR' ? '🚀 Control de Rutas' : '🚚 Mis Rutas'}</h1>
+                        <p>Selecciona un día para ver la ruta asignada</p>
                     </header>
 
                     {/* MOSTRAR PANEL DE DIAS*/}
