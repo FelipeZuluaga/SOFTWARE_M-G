@@ -303,10 +303,14 @@ const getReturnHistory = async (req, res) => {
     const { orderId } = req.params;
     try {
         const [rows] = await db.query(
-            `SELECT r.quantity as cantidad_devuelta, p.name as product_name, r.return_date 
-             FROM order_returns r 
-             JOIN products p ON r.product_id = p.id 
-             WHERE r.order_id = ?`,
+            `SELECT 
+                r.product_id, -- <--- TE FALTABA ESTO
+                r.quantity as cantidad_devuelta, 
+                p.name as product_name, 
+                r.return_date 
+            FROM order_returns r 
+            JOIN products p ON r.product_id = p.id 
+            WHERE r.order_id = ?`,
             [orderId]
         );
         res.json(rows);

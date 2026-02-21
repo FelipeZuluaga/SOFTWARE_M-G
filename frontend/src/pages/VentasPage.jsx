@@ -601,6 +601,26 @@ export default function VentasPage() {
 
             const result = await saleService.createSale(payload);
 
+            // FILTRAR PRODUCTOS QUE SOBRARON EN EL CAMIÓN
+            const productosSobrantes = orderItems
+                .filter(item => item.quantity > 0) // Solo lo que tiene stock > 0
+                .map(item => ({
+                    product_id: item.product_id,
+                    product_name: item.product_name,
+                    stock_en_camion: item.quantity // Este es el valor que espera DevolucionesPage
+                }));
+
+            // Limpieza post-guardado
+            localStorage.removeItem(`planilla_${selectedOrder.id}`);
+
+            // REDIRIGIR A DEVOLUCIONES PASANDO LOS SOBRANTES
+            navigate("/liquidaciones", {
+                state: {
+                    orderId: selectedOrder.id,
+                    sobrantes: productosSobrantes
+                }
+            });
+
             if (result.success) {
                 alertSuccess("¡Éxito!", "La ruta ha sido liquidada correctamente.");
 

@@ -21,7 +21,6 @@ export default function DevolucionesPage() {
     useEffect(() => {
         if (!orderId) {
             alertError("Error", "No hay una orden seleccionada.");
-            navigate("/ventas");
             return;
         }
 
@@ -31,7 +30,7 @@ export default function DevolucionesPage() {
 
             // 1. Intentamos traer historial de la DB
             const historial = await orderService.getReturnHistory(orderId);
-
+            console.log("Historial recibido:", historial); // <--- DEBUG
             if (historial && historial.length > 0) {
                 // SI HAY HISTORIAL: Lo mostramos y bloqueamos edición
                 setItemsDevolver(historial.map(h => ({
@@ -49,11 +48,16 @@ export default function DevolucionesPage() {
                 setItemsDevolver(sobrantes.map(item => ({
                     product_id: item.product_id,
                     product_name: item.product_name,
-                    cantidad_a_devolver: item.stock_en_camion,
-                    stock_en_sistema: item.stock_en_camion
+                    // Usar stock_en_camion (del navigate) o cantidad_sobrante (del backend)
+                    cantidad_a_devolver: item.stock_en_camion || item.cantidad_sobrante,
+                    stock_en_sistema: item.stock_en_camion || item.cantidad_sobrante
                 })));
                 setEsHistorial(false);
                 setLoading(false);
+            }
+            else if (sobrantes) {
+                console.log("Sobrantes recibidos de navegación:", sobrantes); // <--- DEBUG
+                // ... logic
             }
             // 3. SI NO HAY NADA: Cargamos el detalle original (por si acaso)
             else {
@@ -111,7 +115,7 @@ export default function DevolucionesPage() {
             // Asegúrate de que saleService o orderService tengan processReturn definido
             await orderService.processReturn(payload);
             alertSuccess("Éxito", "El stock ha sido reintegrado al almacén.");
-            navigate("/ventas");
+            navigate("/liquidaciones");
         } catch (err) {
             alertError("Error", "No se pudo procesar la devolución.");
         }
@@ -131,7 +135,7 @@ export default function DevolucionesPage() {
                     className="btn-confirm-all"
                     disabled={esHistorial} // Se deshabilita si ya estamos viendo un historial
                 >
-                    {esHistorial ? "Ya Procesado" : "Procesar Reingreso"}
+                    {esHistorial ? "Ya Se hizo la devoluciòn" : "Procesar Devoluciòn"}
                 </button>
             </header>
 
@@ -156,12 +160,16 @@ export default function DevolucionesPage() {
                                         className="input-modern"
                                         value={item.cantidad_a_devolver}
                                         onChange={(e) => handleCantidadChange(item.product_id, e.target.value)}
+                                        // AÑADE ESTO PARA BLOQUEAR LA EDICIÓN:
+                                        disabled={esHistorial}
+                                        // Opcional: añade un estilo visual de bloqueo
+                                        style={esHistorial ? { backgroundColor: '#f5f5f5', cursor: 'not-allowed', border: 'none' } : {}}
                                     />
                                 </td>
                                 <td>
                                     {item.cantidad_a_devolver === item.stock_en_sistema ?
-                                        <span className="badge-ok">Cuadrado</span> :
-                                        <span className="badge-warning">Diferencia</span>
+                                        <span className="badge-ok">TODO ENTREGADO</span> :
+                                        <span className="badge-warning">DESCUADRE</span>
                                     }
                                 </td>
                             </tr>

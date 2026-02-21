@@ -16,18 +16,23 @@ function MainLayout({ children }) {
 
     const menuOptions = [
         { to: "/dashboard", label: "Inicio", icon: <Lucide.LayoutDashboard size={18} />, roles: ["ADMINISTRADOR", "DESPACHADOR", "SOCIO", "NO_SOCIO"] },
+
+         { to: "/liquidaciones", label: "Devoluciones", icon: <Lucide.AArrowUpIcon size={18} />, roles: ["ADMINISTRADOR", "DESPACHADOR", "SOCIO", "NO_SOCIO"] },
+
+        //ADMIN
         { to: "/AdminDashboard/users", label: "Creaciòn de Usuarios", icon: <Lucide.Users size={18} />, roles: ["ADMINISTRADOR"] },
         { to: "/Inventory", label: "Ingreso de Productos / Inventario", icon: <Lucide.Package size={18} />, roles: ["ADMINISTRADOR"] },
         { to: "/despacho", label: "Crear Ruta", icon: <Lucide.ClipboardList size={18} />, roles: ["ADMINISTRADOR"] },
         { to: "/pedidos", label: "Informe de rutas cargadas", icon: <Lucide.Truck size={18} />, roles: ["ADMINISTRADOR"] },
         { to: "/ventas", label: "Rutas", icon: <Lucide.LayoutDashboard size={18} />, roles: ["ADMINISTRADOR"] },
         { to: "/historial-ventas", label: "Informe de rutas", icon: <Lucide.BarChart3 size={18} />, roles: ["ADMINISTRADOR"] },
-
+        //DESPACHADOR
         { to: "/despacho", label: "Crear Ruta", icon: <Lucide.ClipboardList size={18} />, roles: ["DESPACHADOR"] },
         { to: "/pedidos", label: "Informe de rutas cargadas", icon: <Lucide.Truck size={18} />, roles: ["DESPACHADOR"] },
-
+        //SOCIO Y NO SOCIO
         { to: "/ventas", label: "Mis Rutas Cargadas", icon: <Lucide.Navigation size={18} />, roles: ["SOCIO", "NO_SOCIO"] },
         { to: "/historial-ventas", label: "Informe de mis rutas", icon: <Lucide.TrendingUp size={18} />, roles: ["SOCIO", "NO_SOCIO"] },
+
     ];
 
     return (

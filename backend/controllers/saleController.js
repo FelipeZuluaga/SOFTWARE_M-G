@@ -66,14 +66,15 @@ const createSale = async (req, res) => {
 
             const saleId = saleRes.insertId;
 
-            // 3. REGISTRAR ITEMS (Agregado product_id que faltaba en tu snippet)
+            // 3. REGISTRAR ITEMS
             if (items && items.length > 0) {
                 for (const item of items) {
                     await connection.query(
-                        `INSERT INTO sale_items (sale_id,quantity, unit_price, total_price) 
-                         VALUES (?, ?, ?, ?)`,
+                        `INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, total_price) 
+                         VALUES (?, ?, ?, ?, ?)`,
                         [
                             saleId,
+                            item.product_id, // <--- CORRECCIÓN: Agregar "item." antes
                             item.quantity,
                             item.unit_price,
                             item.total_price
