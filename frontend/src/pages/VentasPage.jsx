@@ -536,6 +536,86 @@ export default function VentasPage() {
         // 4. Cerrar el modal
         setShowModal(false);
     }
+    const handleConfirmarTodo = async () => {
+        // 1. Validación de seguridad
+        if (!selectedOrder || planilla.length === 0) return;
+
+        // 2. Confirmación visual
+        const confirmar = window.confirm(
+            "¿Estás seguro de finalizar la ruta? Esto liquidará el despacho y actualizará las deudas de los clientes."
+        );
+        if (!confirmar) return;
+
+        try {
+            setLoading(true);
+
+            // 3. Mapear los datos de la planilla al formato que espera el Controller
+            const salesData = planilla.map(cliente => {
+                // Calculamos el total de la venta de productos de hoy
+                const totalVentaHoy = calcularTotalFila(cliente);
+
+                // Según tu lógica: amount_paid es el efectivo total recibido hoy
+                // (pago por mercancía de hoy + abono a deuda vieja)
+                const efectivoRecibido = Number(cliente.amount_paid) || 0;
+
+                // Para el backend, dividiremos el efectivo:
+                // - Si el efectivo es mayor que la venta de hoy, el excedente es abono a deuda vieja (credit_amount)
+                // - Si es menor, todo va a amount_paid de la venta de hoy.
+                let pagoVentaHoy = 0;
+                let abonoDeudaVieja = 0;
+
+                if (efectivoRecibido > totalVentaHoy) {
+                    pagoVentaHoy = totalVentaHoy;
+                    abonoDeudaVieja = efectivoRecibido - totalVentaHoy;
+                } else {
+                    pagoVentaHoy = efectivoRecibido;
+                    abonoDeudaVieja = 0;
+                }
+
+                return {
+                    customer_id: cliente.id,
+                    total_amount: totalVentaHoy,       // Mercancía nueva
+                    amount_paid: pagoVentaHoy,         // Parte del efectivo para esa mercancía
+                    credit_amount: abonoDeudaVieja,    // Parte del efectivo para deuda vieja
+                    visit_status: cliente.visit_status,
+                    items: Object.entries(cliente.productos)
+                        .filter(([_, cant]) => cant > 0)
+                        .map(([prodId, cant]) => {
+                            const itemOriginal = orderItems.find(oi => String(oi.product_id) === String(prodId));
+                            const precioUsado = cliente.preciosPersonalizados?.[prodId] ?? itemOriginal?.unit_price;
+                            return {
+                                product_id: prodId,
+                                quantity: cant,
+                                unit_price: precioUsado,
+                                total_price: cant * precioUsado
+                            };
+                        })
+                };
+            });
+
+            // 4. Llamada al servicio
+            const payload = {
+                order_id: selectedOrder.id,
+                sales: salesData
+            };
+
+            const result = await saleService.createSale(payload);
+
+            if (result.success) {
+                alertSuccess("¡Éxito!", "La ruta ha sido liquidada correctamente.");
+
+                // 5. Limpieza post-guardado
+                localStorage.removeItem(`planilla_${selectedOrder.id}`);
+                setSelectedOrder(null); // Volver a la lista de rutas
+                loadPendingOrders();    // Refrescar la lista de despachos
+            }
+        } catch (err) {
+            console.error("Error al liquidar ruta:", err);
+            alertError("Error de Liquidación", err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
     if (loading) return <div className="loading-screen">Cargando...</div>;
     return (
         <div className="ventas-container">
@@ -837,11 +917,11 @@ export default function VentasPage() {
                                 <span>Nuevo Cliente</span>
                             </button>
 
-                            {/* Botón guardar la ruta 
+                            {/* Botón guardar la ruta */}
                             <button onClick={handleConfirmarTodo} className="btn-confirm-all">
                                 <Save size={20} />
                                 <span>Guardar Todo</span>
-                            </button>*/}
+                            </button>
                         </div>
                     </div>
                     <div className="planilla-wrapper">
