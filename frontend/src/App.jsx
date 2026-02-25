@@ -12,7 +12,8 @@ import VentasHistoryPage from "./pages/VentasHistoryPage.jsx";
 import DevolucionesPage from "./pages/DevolucionesPage.jsx";
 import LiquidacionesListPage from "./pages/LiquidacionesListPage.jsx";
 import VentasDetalleReadOnly from "./components/VentasDetalleReadOnly.jsx";
-import SettlementModule from "./components/SettlementModule.jsx"; 
+import SettlementModule from "./components/SettlementModule.jsx";
+import CustomerList from "./components/CustomerList.jsx";
 
 export default function AppRouter() {
   return (
@@ -133,6 +134,16 @@ export default function AppRouter() {
             <RoleRoute allowedRoles={["ADMINISTRADOR", "SOCIO", "NO_SOCIO"]}>
               <MainLayout>
                 <SettlementModule />
+              </MainLayout>
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/clientes"
+          element={
+            <RoleRoute allowedRoles={["ADMINISTRADOR", "SOCIO", "NO_SOCIO"]}>
+              <MainLayout>
+                <CustomerList />
               </MainLayout>
             </RoleRoute>
           }

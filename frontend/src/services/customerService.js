@@ -29,5 +29,17 @@ export const customerService = {
             console.error("Error al crear cliente:", message);
             throw new Error(message);
         }
+    },
+    getDetailedList: async (sellerId = null, visitDay = null) => {
+        try {
+            let url = `/customers/list-detailed?`;
+            if (sellerId) url += `seller_id=${sellerId}&`;
+            if (visitDay) url += `visit_day=${visitDay}`;
+
+            const response = await api.get(url);
+            return response.data.data;
+        } catch (error) {
+            throw error;
+        }
     }
 };

@@ -7,13 +7,15 @@ export const modulesByRole = {
 
         // --- MEJORADO PARA ADMIN ---
         { title: "Rutas", path: "/ventas", iconName: "LayoutDashboard" },
-        { title: "Informe de rutas", path: "/historial-ventas", iconName: "BarChart3" },
+        { title: "Informe de rutas - ventas", path: "/historial-ventas", iconName: "BarChart3" },
 
         { title: "Informe y proceso de Devolucion", path: "/liquidaciones", iconName: "RotateCcw" },
 
 
         { title: "Liquidación", path: "/liquidacion-ruta", iconName: "Calculator" },
         { title: "Pagos", path: "/pagos", iconName: "Wallet" },
+
+        { title: "Informe de Clientes", path: "/clientes", iconName: "BarChart3" }
     ],
     DESPACHADOR: [
         { title: "Crear pedido", path: "/despacho", iconName: "Truck" },
@@ -24,10 +26,12 @@ export const modulesByRole = {
         { title: "Mis Rutas Cargadas", path: "/ventas", iconName: "Navigation" },
         { title: "Informe de mis rutas", path: "/historial-ventas", iconName: "TrendingUp" },
         { title: "Informe y proceso de Devolucion", path: "/liquidaciones", iconName: "RotateCcw" },
+        { title: "Mis clientes", path: "", iconName: "BarChart3" }
     ],
     NO_SOCIO: [
         { title: "Mis Rutas Cargadas", path: "/ventas", iconName: "Navigation" },
         { title: "Informe de mis rutas", path: "/historial-ventas", iconName: "TrendingUp" },
         { title: "Informe y proceso de Devolucion", path: "/liquidaciones", iconName: "RotateCcw" },
+        { title: "Mis clientes", path: "", iconName: "BarChart3" }
     ]
 };

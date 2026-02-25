@@ -133,9 +133,59 @@ const createCustomer = async (req, res) => {
         connection.release();
     }
 };
+const getAllCustomersWithSellerName = async (req, res) => {
+    try {
+        const { seller_id, visit_day } = req.query;
 
+        // Base de la consulta con el JOIN para traer el nombre del vendedor
+        let query = `
+            SELECT 
+                c.id,
+                c.name AS customer_name, 
+                c.address AS customer_address,
+                c.phone, 
+                c.total_debt,
+                c.visit_day,
+                c.position,
+                c.seller_id,
+                c.visit_status_c,
+                u.name AS seller_name
+            FROM customers c
+            LEFT JOIN users u ON c.seller_id = u.id
+            WHERE 1=1
+        `;
+        
+        const params = [];
 
+        // Filtros opcionales
+        if (seller_id) {
+            query += " AND c.seller_id = ?";
+            params.push(seller_id);
+        }
+
+        if (visit_day) {
+            query += " AND c.visit_day = ?";
+            params.push(visit_day);
+        }
+
+        query += " ORDER BY c.seller_id ASC, c.position ASC";
+
+        const [rows] = await db.query(query, params);
+
+        res.json({
+            success: true,
+            data: rows
+        });
+
+    } catch (error) {
+        console.error("Error al obtener lista detallada:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// No olvides exportarla al final del archivo
 module.exports = {
     getCustomersWithBalance,
     createCustomer,
+    getAllCustomersWithSellerName, // <--- Nueva función
 };
