@@ -14,6 +14,8 @@ export default function DevolucionesPage() {
     const [loading, setLoading] = useState(true);
     const [esHistorial, setEsHistorial] = useState(false);
 
+    const [estaLiquidado, setEstaLiquidado] = useState(false); // <--- NUEV ESTADO
+
     useEffect(() => {
         if (!orderId) {
             alertError("Error", "No hay una orden seleccionada.");
@@ -24,6 +26,13 @@ export default function DevolucionesPage() {
         const inicializarPagina = async () => {
             setLoading(true);
             try {
+
+                // 1. Verificamos si ya existe liquidación económica en m_g_settlements
+                // Debes asegurarte que settleOrder(orderId) devuelva algo que indique si ya existe
+                const checkLiquidacion = await orderService.settleOrder(orderId);
+                if (checkLiquidacion && checkLiquidacion.ya_liquidado) {
+                    setEstaLiquidado(true);
+                }
                 // 1. Intentamos traer historial de la DB
                 const historial = await orderService.getReturnHistory(orderId);
                 
@@ -70,6 +79,9 @@ export default function DevolucionesPage() {
 
     // FUNCIÓN UNIFICADA: Procesa devolución O salta a liquidación
     const handleAccionPrincipal = async () => {
+        // Si ya está liquidado económicamente, el botón no debería hacer nada (o estar deshabilitado)
+        if (estaLiquidado) return;
+
         if (esHistorial) {
             // Si ya se hizo, solo navegamos a la liquidación financiera
             navigate(`/liquidacion-ruta/${orderId}`);
@@ -100,13 +112,22 @@ export default function DevolucionesPage() {
                 <button onClick={() => navigate("/liquidaciones")} className="btn-back-list">
                     <ChevronLeft size={20} /> Volver
                 </button>
+
+
                 <h2 className="ruta-title">Liquidación de Inventario - Despacho #{orderId}</h2>
                 
-                <button
+               <button
                     onClick={handleAccionPrincipal}
-                    className={`btn-confirm-all ${esHistorial ? 'btn-history' : ''}`}
+                    // Deshabilitamos si ya está liquidado
+                    disabled={estaLiquidado}
+                    className={`btn-confirm-all ${esHistorial ? 'btn-history' : ''} ${estaLiquidado ? 'btn-disabled' : ''}`}
+                    style={estaLiquidado ? { opacity: 0.5, cursor: 'not-allowed', backgroundColor: '#6c757d' } : {}}
                 >
-                    {esHistorial ? "Siguiente: Liquidar Dinero" : "Confirmar Devolución"}
+                    {estaLiquidado 
+                        ? "Ruta Finalizada (Liquidada)" 
+                        : esHistorial 
+                            ? "Siguiente: Liquidar Dinero" 
+                            : "Confirmar Devolución"}
                 </button>
             </header>
 
