@@ -160,7 +160,7 @@ const SettlementModule = () => {
                     >
                         {isClosed 
                             ? "ESTA ORDEN YA FUE LIQUIDADA" 
-                            : isSaving ? "GUARDANDO..." : "GUARDAR Y FINALIZAR LIQUIDACIÓN"}
+                            : isSaving ? "GUARDANDO..." : "GUARDAR Y FINALIZAR LIQUIDACIÓN"}git 
                     </button>
                 </div>
             </div>

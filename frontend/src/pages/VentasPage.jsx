@@ -436,12 +436,15 @@ export default function VentasPage() {
     // --- FUNCIÓN PARA GENERAR EL PDF (ADAPTADA A PRECIOS EDITABLES) ---
     const generarPDFVenta = (cliente) => {
         const doc = new jsPDF();
-        const totalVenta = calcularTotalFila(cliente);
+        const totalVentaHoy = calcularTotalFila(cliente);
+        const deudaAnterior = Number(cliente.total_debt || 0);
+        const abonoEfectivo = Number(cliente.amount_paid || 0);
+        const saldoFinal = deudaAnterior + totalVentaHoy - abonoEfectivo;
 
         // Encabezado
         doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
-        doc.text("COMPROBANTE DE VENTA", 105, 20, { align: "center" });
+        doc.text("COMPROBANTE DE VISITA / VENTA", 105, 20, { align: "center" });
 
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
@@ -452,12 +455,9 @@ export default function VentasPage() {
 
         // Tabla de productos
         const tableRows = [];
-
         Object.entries(cliente.productos).forEach(([id, cant]) => {
             if (cant > 0) {
-                const p = orderItems.find(i => i.product_id === parseInt(id));
-
-                // LOGICA CLAVE: Usar el precio personalizado si existe, de lo contrario el unit_price base
+                const p = orderItems.find(i => String(i.product_id) === String(id));
                 const precioEfectivo = cliente.preciosPersonalizados?.[id] ?? p.unit_price;
                 const subtotal = cant * precioEfectivo;
 
@@ -470,23 +470,44 @@ export default function VentasPage() {
             }
         });
 
+        // Si no compró productos, ponemos una fila indicando "Solo abono o visita"
+        if (tableRows.length === 0) {
+            tableRows.push([{ content: 'Sin productos vendidos hoy', colSpan: 4, styles: { halign: 'center' } }]);
+        }
+
         autoTable(doc, {
             startY: 55,
             head: [['Producto', 'Cant', 'Precio Unit.', 'Subtotal']],
             body: tableRows,
             theme: 'striped',
-            headStyles: { fillColor: [190, 43, 72] } // Color guinda para el PDF también
+            headStyles: { fillColor: [190, 43, 72] }
         });
 
-        const finalY = doc.lastAutoTable.finalY + 10;
+        const finalY = doc.lastAutoTable.finalY + 15;
 
-        // Resumen de totales
+        // --- RESUMEN FINANCIERO ---
+        doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
-        doc.text(`TOTAL VENTA: $${totalVenta.toLocaleString()}`, 140, finalY);
 
-        if (Number(cliente.abono_deuda) > 0) {
-            doc.text(`ABONO RECIBIDO: $${Number(cliente.abono_deuda).toLocaleString()}`, 140, finalY + 7);
-        }
+        // Columna izquierda (Etiquetas)
+        doc.text("Deuda Anterior:", 120, finalY);
+        doc.text("Venta del Día (+):", 120, finalY + 7);
+        doc.text("Efectivo Recibido (-):", 120, finalY + 14);
+
+        doc.setFontSize(13);
+        doc.text("SALDO PENDIENTE:", 120, finalY + 24);
+
+        // Columna derecha (Valores)
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.text(`$${deudaAnterior.toLocaleString()}`, 190, finalY, { align: "right" });
+        doc.text(`$${totalVentaHoy.toLocaleString()}`, 190, finalY + 7, { align: "right" });
+        doc.text(`$${abonoEfectivo.toLocaleString()}`, 190, finalY + 14, { align: "right" });
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(190, 43, 72); // Color guinda para el saldo
+        doc.text(`$${saldoFinal.toLocaleString()}`, 190, finalY + 24, { align: "right" });
 
         return doc.output('blob');
     };

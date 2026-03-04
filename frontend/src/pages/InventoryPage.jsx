@@ -177,7 +177,10 @@ export default function InventoryPage() {
 
     const resetForm = () => {
         setForm({
-            barcode: generateNextBarcode(), name: "", stock: "", category_id: "",
+            barcode: generateNextBarcode(), // Esto mantiene la propuesta automática
+            name: "",
+            stock: "",
+            category_id: "",
             prices: { 1: "", 2: "", 3: "", 4: "" },
         });
         setEditingProduct(null);
@@ -230,14 +233,18 @@ export default function InventoryPage() {
             <div className="inv-card full-width-card">
                 <form className="inv-form" onSubmit={handleSubmit}>
                     <div className="form-grid">
+                        {/* Sección de Código de Barras mejorada */}
                         <div className="input-group barcode-group">
-                            <label><Barcode size={14} /> Código de barras (Automático)</label>
-                            <input
-                                value={form.barcode}
-                                readOnly
-                                className="input-barcode-auto"
-                                title={form.barcode} // Esto permite ver el código completo al pasar el mouse
-                            />
+                            <label><Barcode size={14} /> Código de barras</label>
+                            <div className="barcode-input-container">
+                                <input
+                                    type="text"
+                                    value={form.barcode}
+                                    onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                                    placeholder="Escanee o escriba..."
+                                    className="input-barcode-editable"
+                                />
+                            </div>
                         </div>
                         <div className="input-group">
                             <label>Nombre del Producto</label>
