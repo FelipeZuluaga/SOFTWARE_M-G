@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ChevronLeft, Printer, MapPin, Phone, Search } from "lucide-react";
+import { ChevronLeft, Printer, MapPin, Phone } from "lucide-react";
 import { saleService } from "../services/saleService";
 import { alertError } from "../services/alertService";
 
@@ -11,38 +11,42 @@ export default function VentasDetalleReadOnly() {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(true);
     
-    // Estado para información general (vendedor, fecha y GASTOS)
+    // 1. ESTADO PARA LA LIQUIDACIÓN CONSOLIDADA (Imagen 2)
+    const [settlement, setSettlement] = useState(null);
+
     const [headerInfo, setHeaderInfo] = useState({ 
         seller_name: "", 
-        date: "",
-        gasto_almuerzo: 0,
-        gasto_gasolina: 0
+        date: ""
     });
 
     useEffect(() => {
-        const fetchPlanilla = async () => {
+        const fetchData = async () => {
             try {
                 setLoading(true);
-                const data = await saleService.getRutaCompleta(orderId);
-                setRutaData(data);
+                
+                // Ejecutamos ambas consultas en paralelo para mayor velocidad
+                const [dataPlanilla, dataSettlement] = await Promise.all([
+                    saleService.getRutaCompleta(orderId),
+                    saleService.getSettlementByOrder(orderId)
+                ]);
 
-                if (data.length > 0) {
-                    // Tomamos los gastos que vienen en el primer registro o en el objeto de la planilla
+                setRutaData(dataPlanilla);
+                setSettlement(dataSettlement);
+
+                if (dataPlanilla.length > 0) {
                     setHeaderInfo({
-                        seller_name: data[0].vendedor_nombre || "N/A",
-                        date: data[0].fecha_venta || new Date().toLocaleDateString(),
-                        // Si la API no trae gastos aún, dejamos los valores por defecto que mencionaste
-                        gasto_almuerzo: Number(data[0].gasto_almuerzo || 56000),
-                        gasto_gasolina: Number(data[0].gasto_gasolina || 28000)
+                        seller_name: dataPlanilla[0].vendedor_nombre || "N/A",
+                        date: dataPlanilla[0].fecha_venta || new Date().toLocaleDateString()
                     });
                 }
             } catch (err) {
-                alertError("Error", "No se pudo cargar la planilla de la ruta.");
+                console.error(err);
+                alertError("Error", "No se pudo cargar la información completa de la ruta.");
             } finally {
                 setLoading(false);
             }
         };
-        fetchPlanilla();
+        fetchData();
     }, [orderId]);
 
     const filteredData = rutaData.filter((item) => {
@@ -55,33 +59,14 @@ export default function VentasDetalleReadOnly() {
 
     if (loading) return <div className="inv-page">Cargando Planilla...</div>;
 
-    // --- CÁLCULOS DE TOTALES ---
-    const totalVenta = filteredData.reduce((acc, item) => acc + Number(item.venta || 0), 0);
-    const totalAbono = filteredData.reduce((acc, item) => acc + Number(item.abono || 0), 0);
-    const totalDebe = filteredData.reduce((acc, item) => acc + Number(item.debe || 0), 0);
-    
-    const totalSaldoFinal = filteredData.reduce((acc, item) => {
-        const debePrevio = Number(item.debe || 0);
-        const ventaHoy = Number(item.venta || 0);
-        const abonoHoy = Number(item.abono || 0);
-        return acc + (debePrevio + ventaHoy - abonoHoy);
-    }, 0);
-
-    // Cálculos de liquidación basados en los gastos del headerInfo
-    const totalGastos = headerInfo.gasto_almuerzo + headerInfo.gasto_gasolina;
-
-    const efectivoReal = 10000;
-    
-    // Si la ganancia se calcula descontando también el costo del surtido (totalVenta):
-    const gananciaNeta = totalAbono - totalVenta - totalGastos;
-
-    const falta = totalAbono - totalVenta - totalGastos + efectivoReal;
-
     const fechaHoy = new Date().toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
+        day: '2-digit', month: 'long', year: 'numeric'
     });
+
+    // Cálculos de respaldo por si el settlement no existe todavía
+    const totalSaldoFinal = filteredData.reduce((acc, item) => {
+        return acc + (Number(item.debe || 0) + Number(item.venta || 0) - Number(item.abono || 0));
+    }, 0);
 
     return (
         <div className="inv-page full-layout">
@@ -156,53 +141,67 @@ export default function VentasDetalleReadOnly() {
                 </table>
             </div>
 
-            {/* TABLA DE LIQUIDACIÓN ACTUALIZADA */}
+            {/* TABLA DE LIQUIDACIÓN VINCULADA A LA CONSULTA DE LA IMAGEN 2 */}
             <div className="resumen-liquidacion" style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end' }}>
                 <table className="excel-table summary-table" style={{ width: '400px' }}>
                     <tbody>
                         <tr style={{ backgroundColor: '#f1f5f9' }}>
                             <th>TOTAL DEBE</th>
-                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${totalDebe.toLocaleString()}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                                ${Number(settlement?.cartera_anterior || 0).toLocaleString()}
+                            </td>
                         </tr>
                         <tr style={{ backgroundColor: '#fef08a' }}>
                             <th style={{ backgroundColor: '#fef9c3' }}>TOTAL ABONO</th>
-                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${totalAbono.toLocaleString()}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                                ${Number(settlement?.total_recaudado || 0).toLocaleString()}
+                            </td>
                         </tr>
                         <tr>
                             <th>TOTAL</th>
-                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${totalSaldoFinal.toLocaleString()}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                                ${totalSaldoFinal.toLocaleString()}
+                            </td>
                         </tr>
                         
-                        {/* GASTOS DINÁMICOS */}
                         <tr>
                             <th>ALMUERZO</th>
-                            <td style={{ textAlign: 'right' }}>${headerInfo.gasto_almuerzo.toLocaleString()}</td>
+                            <td style={{ textAlign: 'right' }}>
+                                ${Number(settlement?.valor_almuerzo || 0).toLocaleString()}
+                            </td>
                         </tr>
                         <tr>
                             <th>GASOLINA</th>
-                            <td style={{ textAlign: 'right' }}>${headerInfo.gasto_gasolina.toLocaleString()}</td>
+                            <td style={{ textAlign: 'right' }}>
+                                ${Number(settlement?.valor_gasolina || 0).toLocaleString()}
+                            </td>
                         </tr>
                         <tr>
                             <th>SURTIDO</th>
-                            <td style={{ textAlign: 'right' }}>${totalVenta.toLocaleString()}</td>
+                            <td style={{ textAlign: 'right' }}>
+                                ${Number(settlement?.ventas_totales || 0).toLocaleString()}
+                            </td>
                         </tr>
 
                         <tr style={{ backgroundColor: '#fef08a' }}>
                             <th style={{ fontWeight: 'bold' }}>GANANCIA NETA</th>
-                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${gananciaNeta.toLocaleString()}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                                ${Number(settlement?.ganancia_vendedor || 0).toLocaleString()}
+                            </td>
                         </tr>
 
-                        {/* EL VALOR REAL QUE DEBE ENTREGAR EL VENDEDOR */}
                         <tr style={{ borderTop: '2px solid #333' }}>
                             <th style={{ fontWeight: 'bold', fontSize: '1.1em' }}>EFECTIVO A ENTREGAR</th>
                             <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '1.1em', color: '#2f855a' }}>
-                                ${efectivoReal.toLocaleString()}
+                                ${Number(settlement?.efectivo_fisico || 0).toLocaleString()}
                             </td>
                         </tr>
 
                         <tr style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
                             <th style={{ fontWeight: 'bold' }}>FALTA</th>
-                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>${falta.toLocaleString()}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                                ${Number(settlement?.diferencia || 0).toLocaleString()}
+                            </td>
                         </tr>
                     </tbody>
                 </table>

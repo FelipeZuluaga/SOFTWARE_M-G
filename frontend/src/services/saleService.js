@@ -49,4 +49,20 @@ export const saleService = {
             throw new Error(errorMsg);
         }
     },
+    /**
+     * NUEVO MÉTODO: Obtiene la liquidación consolidada (Imagen 2)
+     * @param {number|string} orderId 
+     */
+    getSettlementByOrder: async (orderId) => {
+        try {
+            if (!orderId) throw new Error("ID de orden no proporcionado");
+            // Llamamos al nuevo endpoint que creamos en el router
+            const response = await api.get(`/sales/settlement/${orderId}`);
+            return response.data; // Retorna el objeto con total_recaudado, diferencia, etc.
+        } catch (error) {
+            console.error("Error en getSettlementByOrder:", error);
+            const errorMsg = error.response?.data?.message || "Error al obtener los datos de liquidación";
+            throw new Error(errorMsg);
+        }
+    },
 };

@@ -143,5 +143,37 @@ const getRutaCompleta = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+// --- NUEVA FUNCIÓN PARA LA CONSULTA DE LA IMAGEN 2 ---
+const getSettlementByOrder = async (req, res) => {
+    const { orderId } = req.params;
+    try {
+        const [rows] = await db.query(`
+            SELECT 
+                id, 
+                order_id, 
+                user_id, 
+                total_recaudado, 
+                ventas_totales, 
+                cartera_anterior, 
+                valor_almuerzo, 
+                valor_gasolina, 
+                ganancia_vendedor, 
+                efectivo_fisico, 
+                diferencia, 
+                created_at 
+            FROM m_g_settlements 
+            WHERE order_id = ?
+        `, [orderId]);
 
-module.exports = { createSale, getSales, getRutaCompleta };
+        // Retornamos el primer resultado (debería ser único por orden)
+        if (rows.length > 0) {
+            res.json(rows[0]);
+        } else {
+            res.status(404).json({ success: false, message: "No se encontró liquidación para esta orden" });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+module.exports = { createSale, getSales, getRutaCompleta ,getSettlementByOrder };

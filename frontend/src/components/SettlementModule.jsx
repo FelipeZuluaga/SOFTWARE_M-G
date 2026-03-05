@@ -7,9 +7,9 @@ const SettlementModule = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
-    const [isSaving, setIsSaving] = useState(false); // Estado para el proceso de guardado
-    
-    // Estados para los inputs
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Estados para los inputs (el usuario digita ej: 56 para representar 56.000)
     const [efectivoFisico, setEfectivoFisico] = useState(0);
     const [valorAlmuerzo, setValorAlmuerzo] = useState(0);
     const [valorGasolina, setValorGasolina] = useState(0);
@@ -20,13 +20,13 @@ const SettlementModule = () => {
                 const response = await orderService.settleOrder(orderId);
                 setData(response);
 
-                // Si la orden ya viene con status CERRADO, cargamos los valores guardados
                 if (response.status === 'CERRADO') {
-                    setEfectivoFisico(response.efectivo_fisico || 0);
-                    setValorAlmuerzo(response.valor_almuerzo || 0);
-                    setValorGasolina(response.valor_gasolina || 0);
+                    // Si ya está cerrado, dividimos por 1000 para mostrar el número corto en el input
+                    setEfectivoFisico((response.efectivo_fisico || 0) / 1000);
+                    setValorAlmuerzo((response.valor_almuerzo || 0) / 1000);
+                    setValorGasolina((response.valor_gasolina || 0) / 1000);
                 }
-                
+
                 setLoading(false);
             } catch (error) {
                 console.error("Error cargando liquidación:", error);
@@ -36,22 +36,30 @@ const SettlementModule = () => {
         fetchSettlementData();
     }, [orderId]);
 
-    // DETERMINAMOS SI ESTÁ CERRADO PARA BLOQUEAR LA INTERFAZ
     const isClosed = data?.status === 'CERRADO';
 
     if (loading) return <div className="p-5 text-center">Calculando balance de ruta...</div>;
 
-    // --- LÓGICA DE CÁLCULOS ---
-    const recaude_abono = parseFloat(data?.total_recaudado || 0);
-    const venta_hoy = parseFloat(data?.ventas_totales_hoy || 0);
-    const debe_ruta = parseFloat(data?.cartera_anterior || 0);
-    
-    const ganancia_vendedor = recaude_abono - parseFloat(valorAlmuerzo || 0) - parseFloat(valorGasolina || 0);
-    const diferencia = parseFloat(efectivoFisico || 0) - ganancia_vendedor;
+    // --- LÓGICA DE CÁLCULOS (REPLICANDO IMAGEN 1) ---
+    const recaude_abono = parseFloat(data?.total_recaudado || 0); // Ej: 0
+    const venta_hoy = parseFloat(data?.ventas_totales_hoy || 0);  // Ej: 0 (Surtido)
+    const debe_ruta = parseFloat(data?.cartera_anterior || 0);    // Ej: 190000
+
+    // Convertimos inputs a miles
+    const gastoAlmuerzo = parseFloat(valorAlmuerzo || 0);
+    const gastoGasolina = parseFloat(valorGasolina || 0);
+    const efectivoEntregadoReal = parseFloat(efectivoFisico || 0);
+
+    // GANANCIA NETA = Abonos - Surtido - Gastos
+    const ganancia_vendedor = recaude_abono - venta_hoy - (gastoAlmuerzo + gastoGasolina);
+
+    // FALTA = Ganancia Neta + Efectivo Entregado
+    const falta = ganancia_vendedor + efectivoEntregadoReal;
+
+    const totalSaldoFinal = debe_ruta + venta_hoy - recaude_abono;
 
     const handleFinalizar = async () => {
-        if (isClosed) return; // Seguridad extra
-
+        if (isClosed) return;
         try {
             setIsSaving(true);
             const settlementData = {
@@ -59,17 +67,19 @@ const SettlementModule = () => {
                 total_recaudado: recaude_abono,
                 ventas_totales: venta_hoy,
                 cartera_anterior: debe_ruta,
-                valor_almuerzo: parseFloat(valorAlmuerzo),
-                valor_gasolina: parseFloat(valorGasolina),
+                valor_almuerzo: gastoAlmuerzo * 1000, // Multiplicamos para guardar el valor real
+                valor_gasolina: gastoGasolina * 1000,
                 ganancia_vendedor: ganancia_vendedor,
-                efectivo_fisico: parseFloat(efectivoFisico),
-                diferencia: diferencia,
-                status: 'CERRADO' // Enviamos el cambio de status
+                efectivo_fisico: efectivoEntregadoReal * 1000,
+                diferencia: falta,
+                status: 'CERRADO'
             };
 
             await orderService.settleOrder(orderId, settlementData);
-            alert("Liquidación guardada y ruta cerrada con éxito.");
-            navigate('/pedidos');
+            alert("Liquidación guardada con éxito.");
+
+            // REDIRECCIÓN A LA TABLA DE LA IMAGEN 2
+            navigate(`/ventas-detalle/${orderId}`);
         } catch (error) {
             alert("Error al finalizar: " + error);
         } finally {
@@ -87,80 +97,103 @@ const SettlementModule = () => {
                 </div>
 
                 <div className="card-body">
-                    {/* SECCIÓN 1: RESUMEN DE VALORES */}
-                    <div className="row g-3 mb-4">
-                        <div className="col-md-6">
-                            <div className="p-3 border rounded bg-light h-100">
-                                <small className="text-muted d-block text-uppercase">Recaudo / Abonos:</small>
-                                <span className="h5 text-primary">$ {recaude_abono.toLocaleString()}</span>
-                                <hr />
-                                <small className="text-muted d-block text-uppercase">Venta (Surtido):</small>
-                                <span className="h5">$ {venta_hoy.toLocaleString()}</span>
+                    {/* RESUMEN SUPERIOR */}
+                    <div className="row g-2 mb-4">
+                        <div className="col-6">
+                            <div className="p-2 border rounded bg-light">
+                                <small className="text-muted d-block small">TOTAL DEBE</small>
+                                <span className="fw-bold">$ {debe_ruta.toLocaleString()}</span>
                             </div>
                         </div>
-                        <div className="col-md-6">
-                            <div className="p-3 border rounded bg-light h-100">
-                                <small className="text-muted d-block text-uppercase">Deuda Actual Ruta:</small>
-                                <span className="h5 text-danger">$ {debe_ruta.toLocaleString()}</span>
-                                <hr />
-                                <small className="text-muted d-block text-uppercase">Ganancia Esperada:</small>
-                                <span className="h5 text-success">$ {ganancia_vendedor.toLocaleString()}</span>
+                        <div className="col-6">
+                            <div className="p-2 border rounded" style={{ backgroundColor: '#fef9c3' }}>
+                                <small className="text-muted d-block small">TOTAL ABONO</small>
+                                <span className="fw-bold text-primary">$ {recaude_abono.toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <div className="col-12">
+                            <div className="p-2 border rounded bg-light text-center">
+                                <small className="text-muted d-block small">TOTAL SALDO FINAL</small>
+                                <span className="h5 fw-bold">$ {totalSaldoFinal.toLocaleString()}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* SECCIÓN 2: GASTOS (INPUTS BLOQUEABLES) */}
+                    {/* INPUTS DE GASTOS */}
                     <div className="row g-3 mb-4">
                         <div className="col-6">
-                            <label className="fw-bold small text-uppercase">Valor Almuerzo</label>
+                            <label className="fw-bold small">ALMUERZO (Miles)</label>
                             <input
                                 type="number"
                                 className="form-control border-danger"
                                 value={valorAlmuerzo}
                                 onChange={(e) => setValorAlmuerzo(e.target.value)}
-                                onFocus={(e) => e.target.select()}
-                                disabled={isClosed} // BLOQUEADO SI YA SE LIQUIDÓ
+                                disabled={isClosed}
                             />
                         </div>
                         <div className="col-6">
-                            <label className="fw-bold small text-uppercase">Valor Gasolina</label>
+                            <label className="fw-bold small">GASOLINA (Miles)</label>
                             <input
                                 type="number"
                                 className="form-control border-danger"
                                 value={valorGasolina}
                                 onChange={(e) => setValorGasolina(e.target.value)}
-                                onFocus={(e) => e.target.select()}
-                                disabled={isClosed} // BLOQUEADO SI YA SE LIQUIDÓ
+                                disabled={isClosed}
                             />
                         </div>
                     </div>
 
-                    {/* SECCIÓN 3: VERIFICACIÓN FÍSICA */}
-                    <div className="mb-4 text-center p-3 border rounded border-primary bg-aliceblue">
-                        <label className="fw-bold mb-2">¿CUÁNTO EFECTIVO FÍSICO ENTREGÓ?</label>
-                        <input
-                            type="number"
-                            className="form-control form-control-lg text-center border-primary fw-bold"
-                            style={{ fontSize: '2.2rem', height: '80px' }}
-                            value={efectivoFisico}
-                            onChange={(e) => setEfectivoFisico(e.target.value)}
-                            onFocus={(e) => e.target.select()}
-                            disabled={isClosed} // BLOQUEADO SI YA SE LIQUIDÓ
-                        />
-                        <div className={`mt-2 fw-bold ${diferencia < 0 ? 'text-danger' : 'text-success'}`}>
-                            {diferencia === 0 ? "Caja Cuadrada" : `Diferencia: $ ${diferencia.toLocaleString()}`}
+                    {/* SURTIDO Y GANANCIA NETA */}
+                    <div className="row g-2 mb-4">
+                        <div className="col-6">
+                            <div className="p-3 border rounded bg-light">
+                                <small className="text-muted d-block">SURTIDO</small>
+                                <span className="fw-bold text-danger">$ {venta_hoy.toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <div className="col-6">
+                            <div className="p-3 border rounded" style={{ backgroundColor: '#fef9c3' }}>
+                                <small className="text-muted d-block">GANANCIA NETA</small>
+                                <span className="fw-bold">$ {ganancia_vendedor.toLocaleString()}</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* BOTÓN CON LÓGICA DE ESTADO */}
-                    <button 
-                        className={`btn ${isClosed ? 'btn-secondary' : 'btn-dark'} btn-lg w-100 py-3 shadow-sm fw-bold`}
+                    {/* EFECTIVO FÍSICO */}
+                    <div className="mb-4 text-center p-3 border rounded border-primary bg-aliceblue">
+                        <label className="fw-bold mb-2">¿CUÁNTO EFECTIVO FÍSICO ENTREGÓ? (Miles)</label>
+                        <div className="d-flex align-items-center justify-content-center">
+                            <span className="h2 me-2">$</span>
+                            <input
+                                type="number"
+                                className="form-control form-control-lg text-center border-primary fw-bold"
+                                style={{ fontSize: '2.5rem', height: '80px', width: '180px' }}
+                                value={efectivoFisico}
+                                onChange={(e) => setEfectivoFisico(e.target.value)}
+                                onFocus={(e) => e.target.select()}
+                                disabled={isClosed}
+                            />
+                            <span className="h2 ms-2">.000</span>
+                        </div>
+                    </div>
+
+                    {/* RESULTADO FINAL: FALTA */}
+                    <div className={`p-3 border rounded mb-4 text-center ${falta < 0 ? 'bg-light-danger' : 'bg-light-success'}`}
+                        style={{ backgroundColor: falta < 0 ? '#fee2e2' : '#dcfce7' }}>
+                        <small className={`fw-bold d-block ${falta < 0 ? 'text-danger' : 'text-success'}`}>
+                            {falta < 0 ? 'FALTA' : 'SOBRA'}
+                        </small>
+                        <span className={`h3 fw-bold ${falta < 0 ? 'text-danger' : 'text-success'}`}>
+                            $ {falta.toLocaleString()}
+                        </span>
+                    </div>
+
+                    <button
+                        className={`btn ${isClosed ? 'btn-secondary' : 'btn-dark'} btn-lg w-100 py-3 fw-bold`}
                         onClick={handleFinalizar}
                         disabled={isClosed || isSaving}
                     >
-                        {isClosed 
-                            ? "ESTA ORDEN YA FUE LIQUIDADA" 
-                            : isSaving ? "GUARDANDO..." : "GUARDAR Y FINALIZAR LIQUIDACIÓN"}git 
+                        {isClosed ? "ORDEN LIQUIDADA" : isSaving ? "GUARDANDO..." : "GUARDAR Y FINALIZAR"}
                     </button>
                 </div>
             </div>
