@@ -182,7 +182,19 @@ export default function DespachoPage() {
                     </table>
                 </div>
 
-                <div className="form-actions" style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* SECCIÓN MODIFICADA: Ahora es 'sticky' para que no se pierda al hacer scroll */}
+                <div className="form-actions" style={{
+                    marginTop: '30px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    position: 'sticky',
+                    bottom: '0',
+                    backgroundColor: 'white',
+                    padding: '20px 0',
+                    borderTop: '2px solid #eee',
+                    zIndex: 10
+                }}>
                     <div style={{ fontSize: '22px', fontWeight: '800' }}>
                         TOTAL: <span style={{ color: 'var(--primary)' }}>${totalDespacho.toLocaleString()}</span>
                     </div>

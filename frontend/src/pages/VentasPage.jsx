@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { orderService } from "../services/orderService";
 import { saleService } from "../services/saleService";
-import { alertSuccess, alertError } from "../services/alertService";
+import { alertSuccess, alertError, alertConfirm } from "../services/alertService";
 import { customerService } from "../services/customerService";
 import {
     ArrowRight,
@@ -420,18 +420,18 @@ export default function VentasPage() {
 
     const handleCantidadChange = (prodId, valor, stockDisponible) => {
         const cant = parseInt(valor) || 0;
+
         if (cant > stockDisponible) {
+            // Esta alerta se dispara, pero el modal la tapa por CSS
             alertError("Sin Stock", `Solo hay ${stockDisponible} unidades.`);
             return;
         }
+
         const nuevaPlanilla = [...planilla];
         nuevaPlanilla[clienteActualIdx].productos[prodId] = cant;
         setPlanilla(nuevaPlanilla);
-        const confirmarVentaModal = () => {
-            // Aquí puedes agregar la lógica para cerrar y guardar
-            alertSuccess("Venta preparada", "Se han registrado los productos temporalmente.");
-            setShowModal(false);
-        };
+
+        // BORRAMOS la función interna que tenías aquí para evitar conflictos
     };
     // --- FUNCIÓN PARA GENERAR EL PDF (ADAPTADA A PRECIOS EDITABLES) ---
     const generarPDFVenta = (cliente) => {
@@ -516,55 +516,51 @@ export default function VentasPage() {
         const cliente = planilla[clienteActualIdx];
         const totalVenta = calcularTotalFila(cliente);
 
-        // 2. ACTUALIZACIÓN DE STOCK DEL CAMIÓN (Punto 3 de tu solicitud)
-        // Descontamos lo vendido de la carga actual del camión
+        // 2. ACTUALIZACIÓN DE STOCK DEL CAMIÓN
         const stockActualizado = orderItems.map(item => {
             const cantidadVendida = cliente.productos[item.product_id] || 0;
             return {
                 ...item,
-                quantity: Math.max(0, item.quantity - cantidadVendida) // Evita números negativos por si acaso
+                quantity: Math.max(0, item.quantity - cantidadVendida)
             };
         });
         setOrderItems(stockActualizado);
 
-        // 3. LÓGICA DEL PDF (Tu lógica original sin romperla)
-        // Verificamos si hubo venta o abono para generar el comprobante
-        if (totalVenta > 0 || Number(cliente.abono_deuda) > 0) {
+        // 3. LÓGICA DEL PDF Y ACTUALIZACIÓN DE PLANILLA
+        if (totalVenta > 0 || Number(cliente.amount_paid) > 0) {
             try {
-                // Generamos el PDF con los datos actuales (precios y cantidades nuevas)
                 const pdfBlob = generarPDFVenta(cliente);
                 const pdfUrl = URL.createObjectURL(pdfBlob);
 
-                // Actualizamos la planilla con el link al PDF y marcamos la compra
                 const nuevaPlanilla = [...planilla];
                 nuevaPlanilla[clienteActualIdx].facturaBlob = pdfUrl;
 
-                // Opcional: Podrías marcar aquí que el estado de visita cambió a 'VENDIDO'
+                // Si hubo venta, marcamos automáticamente como VISITADO para que se vea el cambio
                 if (totalVenta > 0) {
-                    nuevaPlanilla[clienteActualIdx].visit_status_c = 'VENDIDO';
+                    nuevaPlanilla[clienteActualIdx].visit_status = 'VISITADO';
                 }
 
                 setPlanilla(nuevaPlanilla);
-                alertSuccess(`Venta de ${cliente.name} procesada y stock descontado.`);
+                alertSuccess("Éxito", `Venta de ${cliente.name} procesada.`);
             } catch (error) {
                 console.error("Error al generar PDF:", error);
-                alertError("La venta se registró pero hubo un error con el PDF.");
+                alertError("Error", "La venta se registró pero hubo un error con el PDF.");
             }
-        } else {
-            alertSuccess("Se cerró el modal sin generar venta.");
         }
 
-        // 4. Cerrar el modal
-        setShowModal(false);
-    }
+        // --- EL CAMBIO CLAVE AQUÍ ---
+        setShowModalProductos(false); // Cerramos el modal de productos
+        setClienteActualIdx(null);    // Limpiamos el cliente seleccionado
+    };
     const handleConfirmarTodo = async () => {
         // 1. Validación de seguridad
         if (!selectedOrder || planilla.length === 0) return;
 
         // 2. Confirmación visual
-        const confirmar = window.confirm(
-            "¿Estás seguro de finalizar la ruta? Esto liquidará el despacho y actualizará las deudas de los clientes."
-        );
+        const confirmar = await alertConfirm(
+        "¿Finalizar Hoja de Ruta?", 
+        "Se cerrará la jornada de hoy para este despacho. ¿Deseas continuar?"
+    );
         if (!confirmar) return;
 
         try {

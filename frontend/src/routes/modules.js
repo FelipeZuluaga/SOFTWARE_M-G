@@ -10,9 +10,6 @@ export const modulesByRole = {
         { title: "Informe de rutas - ventas", path: "/historial-ventas", iconName: "BarChart3" },
 
         { title: "Informe y proceso de Devolucion", path: "/liquidaciones", iconName: "RotateCcw" },
-
-
-        { title: "Liquidación", path: "/liquidacion-ruta", iconName: "Calculator" },
         { title: "Pagos", path: "/pagos", iconName: "Wallet" },
 
         { title: "Informe de Clientes", path: "/clientes", iconName: "BarChart3" }
