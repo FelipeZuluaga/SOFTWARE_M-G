@@ -174,6 +174,10 @@ export default function VentasPage() {
 
     // Cerca de donde tienes el estado newCustomer
     const [searchTermPosition, setSearchTermPosition] = useState("");
+    // Dentro de VentasPage, junto a los otros estados:
+    const [showModalGlobal, setShowModalGlobal] = useState(false);
+    const [globalSearchTerm, setGlobalSearchTerm] = useState("");
+    const [allCustomers, setAllCustomers] = useState([]);
     const [showModal, setShowModal] = useState(false);
 
 
@@ -683,6 +687,46 @@ export default function VentasPage() {
             c.address.toLowerCase().includes(searchTermPosition.toLowerCase())
         );
     }, [planilla, searchTermPosition]);
+
+
+    const abrirBusquedaGlobal = async () => {
+        try {
+            setLoading(true);
+            // Traemos todos los clientes del usuario actual
+            const todos = await customerService.getBalances(user.id);
+            setAllCustomers(todos || []);
+            setShowModalGlobal(true);
+        } catch (err) {
+            alertError("Error", "No se pudo conectar con la base de datos de clientes.");
+        } finally {
+            setLoading(false);
+        }
+    };
+    const agregarClienteExtra = (clienteGlobal) => {
+        // Evitar duplicados en la planilla actual
+        if (planilla.find(c => c.id === clienteGlobal.id)) {
+            return alertError("Aviso", "Este cliente ya está en tu lista de hoy.");
+        }
+
+        const nuevoCliente = {
+            id: clienteGlobal.id,
+            name: clienteGlobal.customer_name,
+            address: clienteGlobal.customer_address,
+            phone: clienteGlobal.phone || "",
+            visit_status: "PENDIENTE",
+            total_debt: Number(clienteGlobal.total_debt || 0),
+            venta_hoy: 0,
+            productos: {},
+            preciosPersonalizados: {},
+            position: "EXTRA", // Marca visual para diferenciarlo
+            visit_day: clienteGlobal.visit_day
+        };
+
+        setPlanilla([nuevoCliente, ...planilla]);
+        setShowModalGlobal(false);
+        setGlobalSearchTerm(""); // Limpiar búsqueda
+        alertSuccess("Agregado", `${clienteGlobal.customer_name} listo para vender.`);
+    };
     if (loading) return <div className="loading-screen">Cargando...</div>;
     return (
         <div className="ventas-container">
@@ -1000,6 +1044,11 @@ export default function VentasPage() {
                                 <Save size={20} />
                                 <span>Guardar Todo</span>
                             </button>
+
+                            <button onClick={abrirBusquedaGlobal} className="btn-add-customer" style={{ backgroundColor: '#2bbe74' }}>
+                                <ShoppingCart size={20} />
+                                <span>Venta Extra-Ruta</span>
+                            </button>
                         </div>
                     </div>
                     <div className="planilla-wrapper">
@@ -1112,6 +1161,65 @@ export default function VentasPage() {
                         </table>
                     </div>
 
+                </div>
+            )}
+            {showModalGlobal && (
+                <div className="modal-overlay">
+                    <div className="modal-content modal-ventas-xl" style={{ maxWidth: '600px', height: '80vh' }}>
+                        <div className="modal-header">
+                            <div className="header-title">
+                                <ShoppingCart size={24} className="icon-header" />
+                                <h2>Venta Extra-Ruta (Todos los Clientes)</h2>
+                            </div>
+                            <button className="btn-close-modal" onClick={() => setShowModalGlobal(false)}>✕</button>
+                        </div>
+
+                        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column' }}>
+                            {/* --- BUSCADOR PRINCIPAL --- */}
+                            <div className="search-box-global" style={{ padding: '10px 0', position: 'sticky', top: 0, background: 'white', zIndex: 10 }}>
+                                <input
+                                    type="text"
+                                    placeholder="🔍 Escribe nombre o dirección para buscar..."
+                                    className="input-modern"
+                                    style={{ width: '100%', fontSize: '1.1rem', padding: '12px' }}
+                                    value={globalSearchTerm}
+                                    autoFocus
+                                    onChange={(e) => setGlobalSearchTerm(e.target.value)}
+                                />
+                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '8px' }}>
+                                    Mostrando clientes que coinciden con tu búsqueda
+                                </p>
+                            </div>
+
+                            {/* --- LISTA DE RESULTADOS --- */}
+                            <div className="global-results-list" style={{ flex: 1, overflowY: 'auto', marginTop: '10px' }}>
+                                {allCustomers
+                                    .filter(c =>
+                                        c.customer_name.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+                                        c.customer_address.toLowerCase().includes(globalSearchTerm.toLowerCase())
+                                    )
+                                    .slice(0, 20) // Limitamos a 20 para que sea ultra rápido
+                                    .map(c => (
+                                        <div key={c.id} className="item-cliente-global" onClick={() => agregarClienteExtra(c)}>
+                                            <div className="info">
+                                                <span className="name">{c.customer_name}</span>
+                                                <span className="addr">{c.customer_address}</span>
+                                            </div>
+                                            <div className="meta">
+                                                <span className="day-badge">{c.visit_day}</span>
+                                                <ArrowRight size={18} />
+                                            </div>
+                                        </div>
+                                    ))
+                                }
+                                {globalSearchTerm && allCustomers.filter(c => c.customer_name.toLowerCase().includes(globalSearchTerm.toLowerCase())).length === 0 && (
+                                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                                        No se encontraron clientes con ese nombre.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
