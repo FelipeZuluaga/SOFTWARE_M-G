@@ -2,7 +2,7 @@ export const modulesByRole = {
     ADMINISTRADOR: [
         { title: "Creaciòn de Usuarios", path: "/AdminDashboard/users", iconName: "Users" },
         { title: "Ingreso de Productos / Inventario", path: "/Inventory", iconName: "Package" },
-        { title: "Crear Ruta", path: "/despacho", iconName: "Truck" },
+        { title: "Despachos", path: "/despacho", iconName: "Truck" },
         { title: "Informe de rutas cargadas", path: "/pedidos", iconName: "ClipboardList" },
 
         // --- MEJORADO PARA ADMIN ---

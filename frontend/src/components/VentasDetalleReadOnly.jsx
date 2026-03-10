@@ -146,21 +146,22 @@ export default function VentasDetalleReadOnly() {
                 <table className="excel-table summary-table" style={{ width: '400px' }}>
                     <tbody>
                         <tr style={{ backgroundColor: '#f1f5f9' }}>
-                            <th>TOTAL DEBE</th>
+                            <th>TOTAL CARTERA FECHA</th>
                             <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
                                 ${Number(settlement?.cartera_anterior || 0).toLocaleString()}
                             </td>
                         </tr>
-                        <tr style={{ backgroundColor: '#fef08a' }}>
-                            <th style={{ backgroundColor: '#fef9c3' }}>TOTAL ABONO</th>
-                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                                ${Number(settlement?.total_recaudado || 0).toLocaleString()}
-                            </td>
-                        </tr>
                         <tr>
-                            <th>TOTAL</th>
+                            <th>TOTAL CARTERA SIGUIENTE SEMANA</th>
                             <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
                                 ${totalSaldoFinal.toLocaleString()}
+                            </td>
+                        </tr>
+
+                        <tr style={{ backgroundColor: '#fef08a' }}>
+                            <th style={{ backgroundColor: '#fef9c3' }}>COBRO</th>
+                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                                ${Number(settlement?.total_recaudado || 0).toLocaleString()}
                             </td>
                         </tr>
                         

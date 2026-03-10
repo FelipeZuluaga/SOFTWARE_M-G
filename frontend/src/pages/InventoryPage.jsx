@@ -18,6 +18,7 @@ export default function InventoryPage() {
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
 
+    // Estado para el buscador
     const [searchTerm, setSearchTerm] = useState("");
     const [currentTypeIndex, setCurrentTypeIndex] = useState(0);
 
@@ -26,18 +27,19 @@ export default function InventoryPage() {
         name: "",
         stock: "",
         category_id: "",
-        prices: { 1: "", 2: "", 3: "", 4: "" },
+        prices: { 1: "", 2: "", 3: "", 4: "" }, // Los IDs 1, 2, 3 y 4 deben estar presentes
     });
 
     useEffect(() => {
         loadData();
     }, []);
 
+    // Y asegúrate de llamar a resetForm o cargar el código al montar el componente
     useEffect(() => {
         if (products.length >= 0) {
             setForm(prev => ({ ...prev, barcode: generateNextBarcode() }));
         }
-    }, [products]);
+    }, [products]); // Se recalcula si la lista de productos cambia
 
     const loadData = async () => {
         try {
@@ -52,7 +54,135 @@ export default function InventoryPage() {
         }
     };
 
-    // --- NUEVA FUNCIÓN PARA ESCANEO RÁPIDO ---
+    // Lógica de filtrado de productos
+    const filteredProducts = products.filter((p) =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.barcode.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const getPrice = (prices, id) => prices?.find(p => p.customer_type_id === id)?.unit_price || 0;
+
+    const calculateGrandTotal = (typeId) => {
+        return products.reduce((acc, p) => {
+            const price = getPrice(p.prices, typeId);
+            return acc + (Number(p.stock) * Number(price));
+        }, 0);
+    };
+
+    const productsInCriticalStock = products.filter(p => Number(p.stock) < 10).length;
+    const currentType = CUSTOMER_TYPES[currentTypeIndex];
+    const currentTotalValue = calculateGrandTotal(currentType.id);
+    const totalStockUnits = products.reduce((acc, p) => acc + (Number(p.stock) || 0), 0);
+
+
+    const handleDelete = async (id) => {
+        const result = await alertConfirm(
+            "¿Eliminar producto?",
+            "Esta acción no se puede deshacer y borrará todos los precios asociados."
+        );
+
+        if (result.isConfirmed) {
+            try {
+                const cleanId = String(id).split(':')[0];
+                await inventoryService.deleteProduct(cleanId);
+                alertSuccess("Eliminado", "El producto ha sido quitado del inventario.");
+                loadData();
+            } catch (err) {
+                alertError("Error", "No se pudo eliminar el producto seleccionado.");
+            }
+        }
+    };
+    // Función para generar el siguiente código
+    const generateNextBarcode = () => {
+        if (products.length === 0) return "1000";
+
+        // Extraemos los códigos, convertimos a número y buscamos el mayor
+        const codes = products.map(p => parseInt(p.barcode)).filter(n => !isNaN(n));
+        const maxCode = codes.length > 0 ? Math.max(...codes) : 999;
+
+        return String(maxCode + 1);
+    };
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!form.category_id) return alertError("Faltan datos", "Por favor selecciona una categoría.");
+
+        try {
+            setLoading(true);
+            const payload = {
+                ...form,
+                stock: Math.floor(Number(form.stock)),
+                category_id: Number(form.category_id),
+                prices: CUSTOMER_TYPES.map(c => ({
+                    customer_type_id: c.id,
+                    unit_price: Math.trunc(Number(form.prices[c.id]) || 0)
+                }))
+            };
+
+            await inventoryService.createProduct(payload);
+            alertSuccess("¡Éxito!", "Producto registrado correctamente.");
+            resetForm();
+            loadData();
+        } catch (err) {
+            alertError("Error al guardar", "Verifica los datos e intenta nuevamente.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdate = async () => {
+        if (!form.category_id || form.category_id === "0") {
+            return alertError("Error de Categoría", "Selecciona una categoría válida antes de guardar.");
+        }
+
+        try {
+            const cleanId = String(editingProduct.id).split(':')[0];
+            const payload = {
+                name: form.name.trim(),
+                stock: Math.floor(Number(form.stock)) || 0,
+                category_id: Number(form.category_id),
+                prices: CUSTOMER_TYPES.map((c) => ({
+                    customer_type_id: c.id,
+                    unit_price: Math.trunc(Number(form.prices[c.id]) || 0),
+                })),
+            };
+
+            await inventoryService.updateProduct(cleanId, payload);
+            alertSuccess("¡Actualizado!", "Los cambios se guardaron correctamente.");
+            setShowModal(false);
+            setEditingProduct(null);
+            resetForm();
+            loadData();
+        } catch (err) {
+            console.error("Error en la actualización:", err);
+            alertError("Error de Servidor", "No se pudo actualizar. Verifica la conexión con el backend.");
+        }
+    };
+
+    const openEditModal = (p) => {
+        const pricesObj = { 1: "", 2: "", 3: "", 4: "" };
+        p.prices?.forEach(pr => {
+            pricesObj[pr.customer_type_id] = Math.trunc(pr.unit_price);
+        });
+
+        setEditingProduct(p);
+        setForm({
+            barcode: p.barcode,
+            name: p.name,
+            stock: 0, // Iniciamos en 0 para que el usuario sume
+            category_id: categories.find(c => c.name === p.category)?.id || "",
+            prices: pricesObj,
+        });
+        setShowModal(true);
+    };
+
+    const resetForm = () => {
+        setForm({
+            barcode: generateNextBarcode(), name: "", stock: "", category_id: "",
+            prices: { 1: "", 2: "", 3: "", 4: "" },
+        });
+        setEditingProduct(null);
+    };
+     // --- NUEVA FUNCIÓN PARA ESCANEO RÁPIDO ---
     const handleQuickScan = async (scannedBarcode) => {
         if (!scannedBarcode) return;
 
@@ -94,120 +224,6 @@ export default function InventoryPage() {
         }
     };
 
-    const filteredProducts = products.filter((p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.barcode.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const getPrice = (prices, id) => prices?.find(p => p.customer_type_id === id)?.unit_price || 0;
-
-    const calculateGrandTotal = (typeId) => {
-        return products.reduce((acc, p) => {
-            const price = getPrice(p.prices, typeId);
-            return acc + (Number(p.stock) * Number(price));
-        }, 0);
-    };
-
-    const currentType = CUSTOMER_TYPES[currentTypeIndex];
-    const currentTotalValue = calculateGrandTotal(currentType.id);
-    const totalStockUnits = products.reduce((acc, p) => acc + (Number(p.stock) || 0), 0);
-    const productsInCriticalStock = products.filter(p => Number(p.stock) < 10).length;
-
-    const handleDelete = async (id) => {
-        const result = await alertConfirm("¿Eliminar producto?", "Esta acción no se puede deshacer.");
-        if (result.isConfirmed) {
-            try {
-                await inventoryService.deleteProduct(id);
-                alertSuccess("Eliminado", "Producto quitado del inventario.");
-                loadData();
-            } catch (err) {
-                alertError("Error", "No se pudo eliminar.");
-            }
-        }
-    };
-
-    const generateNextBarcode = () => {
-        if (products.length === 0) return "1000";
-        const codes = products.map(p => parseInt(p.barcode)).filter(n => !isNaN(n));
-        const maxCode = codes.length > 0 ? Math.max(...codes) : 999;
-        return String(maxCode + 1);
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!form.category_id) return alertError("Faltan datos", "Selecciona una categoría.");
-
-        try {
-            setLoading(true);
-            const payload = {
-                ...form,
-                stock: Math.floor(Number(form.stock)),
-                category_id: Number(form.category_id),
-                prices: CUSTOMER_TYPES.map(c => ({
-                    customer_type_id: c.id,
-                    unit_price: Math.trunc(Number(form.prices[c.id]) || 0)
-                }))
-            };
-            await inventoryService.createProduct(payload);
-            alertSuccess("¡Éxito!", "Producto registrado.");
-            resetForm();
-            loadData();
-        } catch (err) {
-            alertError("Error", "No se pudo crear el producto.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleUpdate = async () => {
-        try {
-            const payload = {
-                name: form.name.trim(),
-                stock: Math.floor(Number(form.stock)) || 0,
-                category_id: Number(form.category_id),
-                prices: CUSTOMER_TYPES.map((c) => ({
-                    customer_type_id: c.id,
-                    unit_price: Math.trunc(Number(form.prices[c.id]) || 0),
-                })),
-            };
-            await inventoryService.updateProduct(editingProduct.id, payload);
-            alertSuccess("¡Actualizado!", "Cambios guardados.");
-            setShowModal(false);
-            resetForm();
-            loadData();
-        } catch (err) {
-            alertError("Error", "No se pudo actualizar.");
-        }
-    };
-
-    const openEditModal = (p) => {
-        const pricesObj = { 1: "", 2: "", 3: "", 4: "" };
-        p.prices?.forEach(pr => { pricesObj[pr.customer_type_id] = Math.trunc(pr.unit_price); });
-
-        setEditingProduct(p);
-        setForm({
-            barcode: p.barcode,
-            name: p.name,
-            stock: 0,
-            category_id: categories.find(c => c.name === p.category)?.id || "",
-            prices: pricesObj,
-        });
-        setShowModal(true);
-    };
-
-    const resetForm = () => {
-        setForm({
-            barcode: generateNextBarcode(),
-            name: "",
-            stock: "",
-            category_id: "",
-            prices: { 1: "", 2: "", 3: "", 4: "" },
-        });
-        setEditingProduct(null);
-        // Devolvemos el foco al código para el siguiente escaneo
-        document.getElementById("barcode-input")?.focus();
-    };
-
     return (
         <div className="inv-page full-layout">
             <div className="module-intro">
@@ -220,16 +236,29 @@ export default function InventoryPage() {
                     <div className="s-icon"><DollarSign size={22} /></div>
                     <div className="s-info carousel-info">
                         <label>Inversión Total ({currentType.label})</label>
-                        <span className="price-display">${currentTotalValue.toLocaleString()}</span>
+                        <div className="carousel-container">
+                            <span key={currentType.id} className="price-display fade-in">
+                                ${currentTotalValue.toLocaleString()}
+                            </span>
+                        </div>
+                        <div className="carousel-dots">
+                            {CUSTOMER_TYPES.map((_, idx) => (
+                                <div key={idx} className={`dot ${idx === currentTypeIndex ? 'active' : ''}`} />
+                            ))}
+                        </div>
                     </div>
                 </div>
+
                 <div className="s-card total-items">
                     <div className="s-icon"><Boxes size={22} /></div>
                     <div className="s-info">
-                        <label>Total Existencias</label>
-                        <span>{totalStockUnits.toLocaleString()}</span>
+                        <label>Total Existencias (Unidades)</label>
+                        <span style={{ color: totalStockUnits === 0 ? 'var(--primary)' : 'inherit' }}>
+                            {totalStockUnits.toLocaleString()}
+                        </span>
                     </div>
                 </div>
+
                 <div className="s-card alerts">
                     <div className="s-icon"><AlertTriangle size={22} /></div>
                     <div className="s-info">
@@ -263,7 +292,6 @@ export default function InventoryPage() {
                         <div className="input-group">
                             <label>Nombre del Producto</label>
                             <input
-                                id="product-name-input"
                                 value={form.name}
                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                                 required
@@ -293,7 +321,7 @@ export default function InventoryPage() {
                         </div>
                     </div>
 
-                    <h3 className="section-title">Precios de Venta</h3>
+                    <h3 className="section-title">Precios de Venta Unitarios</h3>
                     <div className="prices-grid">
                         {CUSTOMER_TYPES.map((c) => (
                             <div key={c.id} className="price-card">
@@ -313,13 +341,15 @@ export default function InventoryPage() {
                             </div>
                         ))}
                     </div>
-
+                    {/* --- SECCIÓN DEL BUSCADOR --- */}
                     <div className="search-bar-container">
                         <div className="input-group" style={{ maxWidth: '500px', margin: '0 auto' }}>
-                            <label><Search size={18} /> Buscar en el inventario</label>
+                            <label style={{ display: 'flex', gap: '8px', marginBottom: '8px', fontWeight: 'bold' }}>
+                                <Search size={18} /> Buscar en el inventario
+                            </label>
                             <input
                                 type="text"
-                                placeholder="Nombre o código..."
+                                placeholder="Escribe el nombre o código del producto..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -333,6 +363,8 @@ export default function InventoryPage() {
                     </div>
                 </form>
 
+
+
                 <div className="table-container-fixed">
                     <table className="inv-table no-scroll">
                         <thead>
@@ -345,10 +377,15 @@ export default function InventoryPage() {
                                 <th>No Socio</th>
                                 <th>Cliente</th>
                                 <th>May.</th>
+                                <th className="col-total">T. Socio</th>
+                                <th className="col-total">T. N.Socio</th>
+                                <th className="col-total">T. Cliente</th>
+                                <th className="col-total">T. May.</th>
                                 <th className="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
+                            {/* Se reemplaza products por filteredProducts */}
                             {filteredProducts.map((p) => (
                                 <tr key={p.id}>
                                     <td className="font-mono">{p.barcode}</td>
@@ -364,6 +401,13 @@ export default function InventoryPage() {
                                             ${Math.trunc(getPrice(p.prices, c.id)).toLocaleString()}
                                         </td>
                                     ))}
+                                    {CUSTOMER_TYPES.map(c => (
+                                        <td key={`total-${p.id}-${c.id}`} className="col-total">
+                                            <strong>
+                                                ${Math.trunc(getPrice(p.prices, c.id) * p.stock).toLocaleString()}
+                                            </strong>
+                                        </td>
+                                    ))}
                                     <td className="text-center">
                                         <div className="action-group">
                                             <button className="btn-edit" onClick={() => openEditModal(p)}>
@@ -376,6 +420,14 @@ export default function InventoryPage() {
                                     </td>
                                 </tr>
                             ))}
+                            {/* Mensaje si no hay resultados */}
+                            {filteredProducts.length === 0 && (
+                                <tr>
+                                    <td colSpan="13" style={{ textAlign: 'center', padding: '30px', color: '#666' }}>
+                                        No se encontraron productos que coincidan con "{searchTerm}"
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -385,24 +437,78 @@ export default function InventoryPage() {
                 <div className="modal-overlay">
                     <div className="modal-content fade-in">
                         <div className="modal-header">
-                            <h2>Actualizar {editingProduct?.name}</h2>
+                            <div>
+                                <h2>Actualizar Información</h2>
+                                <p className="modal-subtitle">Modificando: <strong>{editingProduct?.name}</strong></p>
+                            </div>
                             <button className="close-x" onClick={() => setShowModal(false)}>&times;</button>
                         </div>
+
                         <div className="modal-body">
                             <div className="modal-form-grid">
                                 <div className="input-group">
-                                    <label>Añadir al Stock</label>
+                                    <label><Barcode size={14} /> Código (Solo lectura)</label>
+                                    <input value={form.barcode} disabled className="input-disabled" />
+                                </div>
+                                <div className="input-group">
+                                    <label>Nombre del Producto</label>
+                                    <input
+                                        value={form.name}
+                                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label><Boxes size={14} /> Añadir al Stock (Ingreso)</label>
                                     <input
                                         type="number"
+                                        placeholder="Ej: 10"
                                         value={form.stock}
                                         onChange={(e) => setForm({ ...form, stock: e.target.value })}
                                     />
-                                    <small>Se sumará al actual: {editingProduct?.stock}</small>
+                                    <small>El valor ingresado se sumará al actual ({editingProduct?.stock})</small>
+                                </div>
+                                <div className="input-group">
+                                    <label><Tag size={14} /> Categoría</label>
+                                    <select
+                                        value={form.category_id}
+                                        onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                                    >
+                                        <option value="">Seleccione una categoría</option>
+                                        {categories.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
+
+                            <h3 className="section-title">Ajustar Precios Unitarios</h3>
+                            <div className="modal-prices-grid">
+                                {CUSTOMER_TYPES.map(c => (
+                                    <div key={c.id} className="price-card">
+                                        <label>{c.label}</label>
+                                        <div className="input-with-icon">
+                                            <span>$</span>
+                                            <input
+                                                type="number"
+                                                value={form.prices[c.id]}
+                                                onChange={(e) => setForm({
+                                                    ...form,
+                                                    prices: { ...form.prices, [c.id]: e.target.value }
+                                                })}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
+
                         <div className="modal-footer">
-                            <button className="btn-modal-save" onClick={handleUpdate}>Guardar Cambios</button>
+                            <button className="btn-modal-cancel" onClick={() => setShowModal(false)}>
+                                Cancelar
+                            </button>
+                            <button className="btn-modal-save" onClick={handleUpdate}>
+                                Actualizar Producto
+                            </button>
                         </div>
                     </div>
                 </div>

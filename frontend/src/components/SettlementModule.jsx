@@ -20,7 +20,7 @@ const SettlementModule = () => {
                 const response = await orderService.settleOrder(orderId);
                 setData(response);
 
-                if (response.status === 'CERRADO') {
+                if (response.status === 'LIQUIDADO') {
                     // Si ya está cerrado, dividimos por 1000 para mostrar el número corto en el input
                     setEfectivoFisico((response.efectivo_fisico || 0) / 1000);
                     setValorAlmuerzo((response.valor_almuerzo || 0) / 1000);
@@ -36,7 +36,7 @@ const SettlementModule = () => {
         fetchSettlementData();
     }, [orderId]);
 
-    const isClosed = data?.status === 'CERRADO';
+    const isClosed = data?.status === 'LIQUIDADO';
 
     if (loading) return <div className="p-5 text-center">Calculando balance de ruta...</div>;
 
@@ -72,7 +72,7 @@ const SettlementModule = () => {
                 ganancia_vendedor: ganancia_vendedor,
                 efectivo_fisico: efectivoEntregadoReal * 1000,
                 diferencia: falta,
-                status: 'CERRADO'
+                status: 'LIQUIDADO'
             };
 
             await orderService.settleOrder(orderId, settlementData);
@@ -101,13 +101,13 @@ const SettlementModule = () => {
                     <div className="row g-2 mb-4">
                         <div className="col-6">
                             <div className="p-2 border rounded bg-light">
-                                <small className="text-muted d-block small">TOTAL DEBE</small>
+                                <small className="text-muted d-block small">TOTAL CARTERA FECHA: </small>
                                 <span className="fw-bold">$ {debe_ruta.toLocaleString()}</span>
                             </div>
                         </div>
                         <div className="col-6">
                             <div className="p-2 border rounded" style={{ backgroundColor: '#fef9c3' }}>
-                                <small className="text-muted d-block small">TOTAL ABONO</small>
+                                <small className="text-muted d-block small">COBRO: </small>
                                 <span className="fw-bold text-primary">$ {recaude_abono.toLocaleString()}</span>
                             </div>
                         </div>
