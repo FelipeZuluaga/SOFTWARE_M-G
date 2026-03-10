@@ -462,25 +462,34 @@ export default function VentasPage() {
     };
     // --- FUNCIÓN PARA GENERAR EL PDF (ADAPTADA A PRECIOS EDITABLES) ---
     const generarPDFVenta = (cliente) => {
-        const doc = new jsPDF();
+        // 1. CONFIGURACIÓN DE FORMATO TICKET (80mm de ancho)
+        // El largo es estimado (200), jspdf-autotable lo manejará.
+        const doc = new jsPDF({
+            unit: "mm",
+            format: [80, 200]
+        });
+
         const totalVentaHoy = calcularTotalFila(cliente);
         const deudaAnterior = Number(cliente.total_debt || 0);
         const abonoEfectivo = Number(cliente.amount_paid || 0);
         const saldoFinal = deudaAnterior + totalVentaHoy - abonoEfectivo;
+        const pageWidth = doc.internal.pageSize.getWidth();
 
-        // Encabezado
-        doc.setFontSize(18);
+        // 2. ENCABEZADO TIPO TICKET
+        doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text("COMPROBANTE DE VISITA / VENTA", 105, 20, { align: "center" });
+        doc.text("MAYORISTA GALLEGO", pageWidth / 2, 10, { align: "center" });
 
-        doc.setFontSize(10);
+        doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
-        doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 30);
-        doc.text(`Vendedor: ${selectedOrder.seller_name}`, 20, 35);
-        doc.text(`Cliente: ${cliente.name}`, 20, 45);
-        doc.text(`Dirección: ${cliente.address}`, 20, 50);
+        doc.text("------------------------------------------", pageWidth / 2, 14, { align: "center" });
+        doc.text(`FECHA: ${new Date().toLocaleString()}`, 5, 18);
+        doc.text(`VENDEDOR: ${selectedOrder.seller_name.toUpperCase()}`, 5, 22);
+        doc.text(`CLIENTE: ${cliente.name.toUpperCase()}`, 5, 26);
+        doc.text(`DIR: ${cliente.address.substring(0, 35)}`, 5, 30); // Truncar si es muy larga
+        doc.text("------------------------------------------", pageWidth / 2, 34, { align: "center" });
 
-        // Tabla de productos
+        // 3. TABLA DE PRODUCTOS ESTILO MINIMALISTA
         const tableRows = [];
         Object.entries(cliente.productos).forEach(([id, cant]) => {
             if (cant > 0) {
@@ -491,50 +500,60 @@ export default function VentasPage() {
                 tableRows.push([
                     p.product_name,
                     cant,
-                    `$${Number(precioEfectivo).toLocaleString()}`,
                     `$${subtotal.toLocaleString()}`
                 ]);
             }
         });
 
-        // Si no compró productos, ponemos una fila indicando "Solo abono o visita"
-        if (tableRows.length === 0) {
-            tableRows.push([{ content: 'Sin productos vendidos hoy', colSpan: 4, styles: { halign: 'center' } }]);
-        }
-
         autoTable(doc, {
-            startY: 55,
-            head: [['Producto', 'Cant', 'Precio Unit.', 'Subtotal']],
+            startY: 36,
+            theme: 'plain', // Sin colores de fondo para impresora térmica
+            styles: { fontSize: 7, cellPadding: 1 },
+            headStyles: { fontStyle: 'bold', textColor: [0, 0, 0] },
+            columnStyles: {
+                0: { cellWidth: 35 }, // Producto
+                1: { cellWidth: 10, halign: 'center' }, // Cant
+                2: { cellWidth: 20, halign: 'right' }   // Total
+            },
+            head: [['ARTICULO', 'CANT', 'TOTAL']],
             body: tableRows,
-            theme: 'striped',
-            headStyles: { fillColor: [190, 43, 72] }
         });
 
-        const finalY = doc.lastAutoTable.finalY + 15;
+        // 4. RESUMEN FINAL (Debajo de la tabla)
+        let finalY = doc.lastAutoTable.finalY + 5;
 
-        // --- RESUMEN FINANCIERO ---
-        doc.setFontSize(11);
+        doc.setFontSize(8);
+        doc.text("------------------------------------------", pageWidth / 2, finalY, { align: "center" });
+        finalY += 4;
+
+        // Alineación derecha para los totales
+        const rightAlign = pageWidth - 5;
+
+        doc.text("DEUDA ANTERIOR:", 5, finalY);
+        doc.text(`$${deudaAnterior.toLocaleString()}`, rightAlign, finalY, { align: "right" });
+
+        finalY += 4;
+        doc.text("VENTA HOY (+):", 5, finalY);
+        doc.text(`$${totalVentaHoy.toLocaleString()}`, rightAlign, finalY, { align: "right" });
+
+        finalY += 4;
+        doc.text("PAGO RECIBIDO (-):", 5, finalY);
+        doc.text(`$${abonoEfectivo.toLocaleString()}`, rightAlign, finalY, { align: "right" });
+
+        finalY += 6;
+        doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
+        doc.text("SALDO TOTAL:", 5, finalY);
+        doc.text(`$${saldoFinal.toLocaleString()}`, rightAlign, finalY, { align: "right" });
 
-        // Columna izquierda (Etiquetas)
-        doc.text("Deuda Anterior:", 120, finalY);
-        doc.text("Venta del Día (+):", 120, finalY + 7);
-        doc.text("Efectivo Recibido (-):", 120, finalY + 14);
+        finalY += 10;
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "italic");
+        doc.text("Gracias por su compra", pageWidth / 2, finalY, { align: "center" });
 
-        doc.setFontSize(13);
-        doc.text("SALDO PENDIENTE:", 120, finalY + 24);
-
-        // Columna derecha (Valores)
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.text(`$${deudaAnterior.toLocaleString()}`, 190, finalY, { align: "right" });
-        doc.text(`$${totalVentaHoy.toLocaleString()}`, 190, finalY + 7, { align: "right" });
-        doc.text(`$${abonoEfectivo.toLocaleString()}`, 190, finalY + 14, { align: "right" });
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.setTextColor(190, 43, 72); // Color guinda para el saldo
-        doc.text(`$${saldoFinal.toLocaleString()}`, 190, finalY + 24, { align: "right" });
+        // El corte de papel simulado
+        finalY += 5;
+        doc.text(". . . . . . . . . . . . . . . . . . . . .", pageWidth / 2, finalY, { align: "center" });
 
         return doc.output('blob');
     };
