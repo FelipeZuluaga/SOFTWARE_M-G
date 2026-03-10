@@ -171,7 +171,14 @@ export default function VentasPage() {
         visit_day: "Lunes",
         seller_id: "" // Solo lo usará el Admin
     });
+
+    // Cerca de donde tienes el estado newCustomer
+    const [searchTermPosition, setSearchTermPosition] = useState("");
     const [showModal, setShowModal] = useState(false);
+
+
+
+
     const loadPendingOrders = async () => {
         try {
             setLoading(true);
@@ -297,15 +304,17 @@ export default function VentasPage() {
 
             const idReferencia = newCustomer.afterCustomerId;
             let posicionFinal = 1;
+            let indiceInsercion = 0;
 
+            // Calculamos la posición lógica y el índice visual en el array
             if (idReferencia && idReferencia !== "") {
-                const clientePrevio = planilla.find(c => String(c.id) === String(idReferencia));
-                if (clientePrevio) {
-                    posicionFinal = Number(clientePrevio.position) + 1;
+                const indexPrevio = planilla.findIndex(c => String(c.id) === String(idReferencia));
+                if (indexPrevio !== -1) {
+                    posicionFinal = Number(planilla[indexPrevio].position) + 1;
+                    indiceInsercion = indexPrevio + 1;
                 }
             }
 
-            // Determinamos el día correcto para la consulta posterior
             const diaDeLaRuta = newCustomer.visit_day || selectedOrder?.visit_day || "Lunes";
 
             const datosParaEnviar = {
@@ -320,27 +329,41 @@ export default function VentasPage() {
             const res = await customerService.createCustomer(datosParaEnviar);
 
             if (res) {
-                alertSuccess("Éxito", `Cliente agregado en la posición ${posicionFinal}`);
+                alertSuccess("Éxito", `Cliente ${res.customer_name} agregado`);
 
-                // 1. Limpiar el formulario y cerrar modal
+                // --- ACTUALIZACIÓN LOCAL SIN RECARGAR DEL SERVIDOR ---
+                const nuevoClienteFormateado = {
+                    id: res.id, // ID real de la base de datos
+                    name: datosParaEnviar.name,
+                    address: datosParaEnviar.address,
+                    phone: datosParaEnviar.phone,
+                    visit_status: "PENDIENTE",
+                    total_debt: 0,
+                    venta_hoy: 0,
+                    productos: {},
+                    preciosPersonalizados: {},
+                    position: posicionFinal,
+                    visit_day: diaDeLaRuta
+                };
+
+                // Creamos una copia de la planilla actual (preservando ventas ya anotadas)
+                const nuevaPlanilla = [...planilla];
+
+                // Insertamos el cliente en el lugar exacto de la lista
+                nuevaPlanilla.splice(indiceInsercion, 0, nuevoClienteFormateado);
+
+                // Actualizamos el estado y el localStorage
+                setPlanilla(nuevaPlanilla);
+                if (selectedOrder) {
+                    localStorage.setItem(`planilla_${selectedOrder.id}`, JSON.stringify(nuevaPlanilla));
+                }
+
+                // Limpiar y cerrar
                 setShowModal(false);
                 setNewCustomer({
                     name: "", address: "", phone: "",
                     afterCustomerId: "", visit_day: "Lunes", seller_id: user.id
                 });
-
-                // 2. RECARGAR LA PLANILLA CORRECTAMENTE
-                // Pasamos el ID del usuario actual y el día que acabamos de usar
-                const planillaActualizada = await fetchPlanilla(user.id, diaDeLaRuta);
-
-                // 3. ACTUALIZAR EL ESTADO PARA QUE SE VEA EN PANTALLA
-                setPlanilla(planillaActualizada);
-
-                // 4. OPCIONAL: Limpiar el localStorage para que la siguiente carga 
-                // no use la versión vieja sin el cliente nuevo
-                if (selectedOrder) {
-                    localStorage.removeItem(`planilla_${selectedOrder.id}`);
-                }
             }
         } catch (err) {
             alertError("Error", err.message || "No se pudo crear el cliente");
@@ -558,9 +581,9 @@ export default function VentasPage() {
 
         // 2. Confirmación visual
         const confirmar = await alertConfirm(
-        "¿Finalizar Hoja de Ruta?", 
-        "Se cerrará la jornada de hoy para este despacho. ¿Deseas continuar?"
-    );
+            "¿Finalizar Hoja de Ruta?",
+            "Se cerrará la jornada de hoy para este despacho. ¿Deseas continuar?"
+        );
         if (!confirmar) return;
 
         try {
@@ -653,6 +676,13 @@ export default function VentasPage() {
             setLoading(false);
         }
     };
+    const clientesParaSecuencia = useMemo(() => {
+        if (!searchTermPosition) return planilla;
+        return planilla.filter(c =>
+            c.name.toLowerCase().includes(searchTermPosition.toLowerCase()) ||
+            c.address.toLowerCase().includes(searchTermPosition.toLowerCase())
+        );
+    }, [planilla, searchTermPosition]);
     if (loading) return <div className="loading-screen">Cargando...</div>;
     return (
         <div className="ventas-container">
@@ -722,18 +752,30 @@ export default function VentasPage() {
 
                                     <div className="form-group mt-3">
                                         <label>Ubicación en la secuencia</label>
+                                        {/* Nuevo input para filtrar la lista de posiciones */}
+                                        <input
+                                            type="text"
+                                            placeholder="🔍 Buscar cliente de referencia..."
+                                            className="form-control mb-2"
+                                            style={{ fontSize: '0.85rem', marginBottom: '8px' }}
+                                            value={searchTermPosition}
+                                            onChange={(e) => setSearchTermPosition(e.target.value)}
+                                        />
                                         <select
                                             className="form-select select-position"
                                             value={newCustomer.afterCustomerId}
                                             onChange={(e) => setNewCustomer({ ...newCustomer, afterCustomerId: e.target.value })}
                                         >
                                             <option value="">-- Al principio de la ruta --</option>
-                                            {planilla.map((c) => (
+                                            {clientesParaSecuencia.map((c) => (
                                                 <option key={c.id} value={c.id}>
-                                                    Insertar después de: {c.name}
+                                                    Insertar después de: {c.name} ({c.address})
                                                 </option>
                                             ))}
                                         </select>
+                                        {searchTermPosition && clientesParaSecuencia.length === 0 && (
+                                            <small style={{ color: 'red' }}>No se encontró el cliente de referencia</small>
+                                        )}
                                     </div>
                                 </div>
 
