@@ -11,7 +11,6 @@ router.post("/login", async (req, res) => {
       SELECT 
         u.id,
         u.name,
-        u.email,
         r.name AS role
       FROM users u
       INNER JOIN roles r ON u.role_id = r.id
@@ -36,7 +35,6 @@ router.post("/login", async (req, res) => {
       user: {
         id: rows[0].id,
         name: rows[0].name,
-        email: rows[0].email,
         role: rows[0].role,
       },
     });

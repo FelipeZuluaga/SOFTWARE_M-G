@@ -11,5 +11,8 @@ router.get('/', saleController.getSales);
 // NUEVA RUTA: Obtiene la "Hoja de Ruta" completa filtrada por el ID de la orden
 // Endpoint: GET /api/sales/ruta-completa/:orderId
 router.get('/ruta-completa/:orderId', saleController.getRutaCompleta);
+// --- NUEVA RUTA PARA LA LIQUIDACIÓN (IMAGEN 2) ---
+// Endpoint: GET /api/sales/settlement/:orderId
+router.get('/settlement/:orderId', saleController.getSettlementByOrder);
 
 module.exports = router;

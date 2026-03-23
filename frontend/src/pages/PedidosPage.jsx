@@ -341,7 +341,7 @@ export default function PedidosPage() {
                         <input
                             type="date"
                             className="input"
-                            style={{ width: '100%', marginTop: '5px' }}
+                            style={{ width: '80%', marginTop: '5px' }}
                             value={filters.fecha} // IMPORTANTE
                             onChange={(e) => setFilters({ ...filters, fecha: e.target.value })}
                         />
@@ -373,7 +373,7 @@ export default function PedidosPage() {
                                         type="text"
                                         placeholder="Buscar por nombre..."
                                         className="input"
-                                        style={{ width: '100%', marginTop: '5px' }}
+                                        style={{ width: '80%', marginTop: '5px' }}
                                         value={filters.vendedor}
                                         onChange={(e) => setFilters({ ...filters, vendedor: e.target.value })}
                                     />

@@ -138,6 +138,20 @@ export const orderService = {
         } catch (error) {
             throw error.response?.data?.message || "Error al marcar la orden como liquidada";
         }
+    },
+    /**
+     * LIQUIDACIÓN ECONÓMICA: 
+     * Procesa ventas, devoluciones, abonos y calcula el 50/50 y faltantes.
+     * Envía: { abonosManuales, efectivoEntregado, costoProducto }
+     */
+    settleOrder: async (orderId, settlementData) => {
+        try {
+            const response = await api.post(`/orders/settle/${orderId}`, settlementData);
+            return response.data;
+        } catch (error) {
+            console.error("Error en settleOrder:", error.response?.data);
+            throw error.response?.data?.message || "Error al procesar la liquidación económica";
+        }
     }  
     
 };

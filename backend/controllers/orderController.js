@@ -303,10 +303,14 @@ const getReturnHistory = async (req, res) => {
     const { orderId } = req.params;
     try {
         const [rows] = await db.query(
-            `SELECT r.quantity as cantidad_devuelta, p.name as product_name, r.return_date 
-             FROM order_returns r 
-             JOIN products p ON r.product_id = p.id 
-             WHERE r.order_id = ?`,
+            `SELECT 
+                r.product_id, -- <--- TE FALTABA ESTO
+                r.quantity as cantidad_devuelta, 
+                p.name as product_name, 
+                r.return_date 
+            FROM order_returns r 
+            JOIN products p ON r.product_id = p.id 
+            WHERE r.order_id = ?`,
             [orderId]
         );
         res.json(rows);
@@ -355,6 +359,86 @@ const markAsLiquidated = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
+
+const settleOrder = async (req, res) => {
+    const { orderId } = req.params;
+
+    // Capturamos los datos enviados desde el frontend (React)
+    const {
+        user_id,
+        total_recaudado,
+        ventas_totales,
+        cartera_anterior,
+        valor_almuerzo,
+        valor_gasolina,
+        ganancia_vendedor,
+        efectivo_fisico,
+        diferencia
+    } = req.body || {};
+
+    try {
+        // 1. RECAUDO Y VENTAS (Igual que lo tenías)
+        const [cashData] = await db.query(`
+            SELECT IFNULL(SUM(amount_paid), 0) as total_recaudado,
+                   IFNULL(SUM(total_amount), 0) as ventas_totales_hoy
+            FROM sales WHERE order_id = ?
+        `, [orderId]);
+
+        // 2. CARTERA (Igual que lo tenías)
+        const [carteraData] = await db.query(`
+            SELECT IFNULL(SUM(total_debt), 0) as cartera_anterior 
+            FROM customers 
+            WHERE id IN (SELECT DISTINCT customer_id FROM sales WHERE order_id = ?)
+        `, [orderId]);
+
+        // 3. OBTENER USER_ID DE LA ORDEN (Si no viene en el body)
+        const [orderInfo] = await db.query("SELECT user_id FROM orders WHERE id = ?", [orderId]);
+
+        // 4. FLUJO DE CONSULTA (Si no hay efectivo_fisico enviado)
+        if (efectivo_fisico === undefined) {
+            return res.json({
+                user_id: orderInfo[0]?.user_id,
+                total_recaudado: cashData[0].total_recaudado,
+                ventas_totales_hoy: cashData[0].ventas_totales_hoy,
+                cartera_anterior: carteraData[0].cartera_anterior
+            });
+        }
+
+        // 5. FLUJO DE GUARDADO (POST - FINALIZAR)
+        // Insertamos en la tabla m_g_settlements (según la imagen de tu DB)
+        await db.query(`
+            INSERT INTO m_g_settlements 
+            (order_id, user_id, total_recaudado, ventas_totales, cartera_anterior, 
+             valor_almuerzo, valor_gasolina, ganancia_vendedor, efectivo_fisico, diferencia)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            orderId,
+            user_id || orderInfo[0]?.user_id,
+            total_recaudado,
+            ventas_totales,
+            cartera_anterior,
+            valor_almuerzo,
+            valor_gasolina,
+            ganancia_vendedor,
+            efectivo_fisico,
+            diferencia
+        ]);
+
+        // 6. ACTUALIZAR ESTADO DE LA ORDEN
+        await db.query("UPDATE orders SET status = 'CERRADA' WHERE id = ?", [orderId]);
+
+        res.json({
+            success: true,
+            message: "Liquidación guardada en m_g_settlements y ruta cerrada."
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 module.exports = {
     createOrder,
     getOrdersByRole,
@@ -364,5 +448,6 @@ module.exports = {
     updateOrderItems,
     getReturnHistory,
     getTruckInventory,
-    markAsLiquidated
+    markAsLiquidated,
+    settleOrder
 };

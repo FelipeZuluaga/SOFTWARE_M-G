@@ -192,9 +192,11 @@
 }
 
 .form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+    display: grid;
+    /* Damos más peso a la primera columna (barcode) y al nombre */
+    grid-template-columns: 1.5fr 2fr 1fr 1.5fr; 
+    gap: 25px;
+    align-items: start;
 }
 
 .input-group label {
@@ -819,4 +821,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
+}
+.input-barcode-editable {
+    background-color: #ffffff !important; /* Quita el gris de lectura */
+    border: 2px solid #e2e8f0;
+    cursor: text;
+}
+
+.input-barcode-editable:focus {
+    border-color: #3b82f6;
+    outline: none;
 }

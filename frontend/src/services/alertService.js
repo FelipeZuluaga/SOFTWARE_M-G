@@ -26,17 +26,18 @@ export const alertWarning = (title, text) => {
     confirmButtonColor: BRAND_COLOR
   });
 };
-// ESTA ES LA QUE TE FALTA Y CAUSA EL ERROR
+// alertService.js
 export const alertConfirm = (title, text) => {
   return Swal.fire({
     title,
     text,
-    icon: 'warning',
+    icon: 'question', // Cambiado a 'question' para que se vea más amigable
     showCancelButton: true,
     confirmButtonColor: BRAND_COLOR,
     cancelButtonColor: '#636e72',
-    confirmButtonText: 'Sí, continuar',
+    confirmButtonText: 'Sí, finalizar',
     cancelButtonText: 'Cancelar',
     reverseButtons: true
   });
 };
+

@@ -182,6 +182,47 @@ export default function InventoryPage() {
         });
         setEditingProduct(null);
     };
+     // --- NUEVA FUNCIÓN PARA ESCANEO RÁPIDO ---
+    const handleQuickScan = async (scannedBarcode) => {
+        if (!scannedBarcode) return;
+
+        const existingProduct = products.find(p => String(p.barcode) === String(scannedBarcode));
+
+        if (existingProduct) {
+            // Si el producto existe, preparamos el payload para SUMAR 1 al stock
+            const pricesObj = { 1: "", 2: "", 3: "", 4: "" };
+            existingProduct.prices?.forEach(pr => {
+                pricesObj[pr.customer_type_id] = Math.trunc(pr.unit_price);
+            });
+
+            const catId = categories.find(c => c.name === existingProduct.category)?.id || "";
+
+            const payload = {
+                name: existingProduct.name,
+                stock: 1, // El backend hará stock = stock + 1
+                category_id: Number(catId),
+                prices: CUSTOMER_TYPES.map((c) => ({
+                    customer_type_id: c.id,
+                    unit_price: pricesObj[c.id],
+                })),
+            };
+
+            try {
+                setLoading(true);
+                await inventoryService.updateProduct(existingProduct.id, payload);
+                alertSuccess("Stock Actualizado", `+1 unidad a: ${existingProduct.name}`);
+                resetForm();
+                loadData();
+            } catch (err) {
+                alertError("Error", "No se pudo actualizar el stock por escaneo.");
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            // Si no existe, movemos el foco al nombre para que el usuario lo cree
+            document.getElementById("product-name-input")?.focus();
+        }
+    };
 
     return (
         <div className="inv-page full-layout">
@@ -231,12 +272,21 @@ export default function InventoryPage() {
                 <form className="inv-form" onSubmit={handleSubmit}>
                     <div className="form-grid">
                         <div className="input-group barcode-group">
-                            <label><Barcode size={14} /> Código de barras (Automático)</label>
+                            <label><Barcode size={14} /> Código de barras</label>
                             <input
+                                id="barcode-input"
+                                type="text"
                                 value={form.barcode}
-                                readOnly
-                                className="input-barcode-auto"
-                                title={form.barcode} // Esto permite ver el código completo al pasar el mouse
+                                onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleQuickScan(form.barcode);
+                                    }
+                                }}
+                                placeholder="Escanee aquí..."
+                                className="input-barcode-editable"
+                                autoFocus
                             />
                         </div>
                         <div className="input-group">

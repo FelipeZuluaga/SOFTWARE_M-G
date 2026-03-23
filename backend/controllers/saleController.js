@@ -2,105 +2,123 @@ const db = require('../config/db');
 
 const createSale = async (req, res) => {
     const { order_id, sales } = req.body;
-
     const connection = await db.getConnection();
+
     try {
         await connection.beginTransaction();
 
         for (const venta of sales) {
             const {
-                customer_name, customer_address, customer_phone,
-                location_type, visit_status, seller_name,
-                total_amount,   // La compra de hoy (M en tu Excel)
-                amount_paid,    // El pago de la compra de hoy
-                credit_amount   // El abono a la deuda vieja (N en tu Excel)
+                customer_id,
+                total_amount,   // Valor mercancía de hoy
+                amount_paid,    // Dinero para mercancía hoy
+                credit_amount,  // Dinero para deuda vieja
+                visit_status,   // Estado que viene del frontend (ej: 'LLESO', 'VISITADO')
+                items
             } = venta;
 
             const m_totalVentaHoy = Number(total_amount) || 0;
             const pagoVentaHoy = Number(amount_paid) || 0;
             const n_abonoDeudaVieja = Number(credit_amount) || 0;
+            const efectivoTotalRecibido = pagoVentaHoy + n_abonoDeudaVieja;
 
-            // El dinero TOTAL que entra y resta a la deuda global
-            const efectivoRecibidoTotal = pagoVentaHoy + n_abonoDeudaVieja;
-
-            // 1. ACTUALIZAR DEUDA GLOBAL EN LA TABLA CUSTOMERS
-            // Fórmula: Saldo Nuevo = Saldo Anterior + Compra Hoy - (Pago Venta + Abono)
+            // 1. ACTUALIZAR DEUDA Y ESTADO EN TABLA CUSTOMERS (visit_status_c)
+            // Actualizamos la deuda primero
             await connection.query(
-                `INSERT INTO customers (name, address, phone, location_type, total_debt)
-                 VALUES (?, ?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE 
-                    address = VALUES(address),
-                    phone = VALUES(phone),
-                    total_debt = total_debt + ? - ?`,
-                [
-                    customer_name, customer_address, customer_phone, location_type,
-                    (m_totalVentaHoy - efectivoRecibidoTotal), // Si es nuevo
-                    m_totalVentaHoy, efectivoRecibidoTotal    // Si ya existe
-                ]
+                `UPDATE customers 
+                 SET total_debt = total_debt + ? - ? 
+                 WHERE id = ?`,
+                [m_totalVentaHoy, efectivoTotalRecibido, customer_id]
             );
 
-            // 2. RECUPERAR EL ID Y EL SALDO FINAL TRAS LA OPERACIÓN
-            const [custRes] = await connection.query(
-                "SELECT id, total_debt FROM customers WHERE name = ?",
-                [customer_name]
+            // Consultamos la nueva deuda para aplicar la lógica de 'LLESO'
+            const [clienteActualizado] = await connection.query(
+                `SELECT total_debt FROM customers WHERE id = ?`,
+                [customer_id]
             );
-            const customer_id = custRes[0].id;
-            const saldoFinalCalculado = custRes[0].total_debt;
 
-            // 3. REGISTRAR LA VENTA CON DESGLOSE
-            // Guardamos credit_amount por separado para que el historial sepa si hubo abono
+            const nuevaDeuda = Number(clienteActualizado[0].total_debt) || 0;
+            let estadoParaCliente = visit_status;
+
+            // Lógica empresarial: Si es LLESO pero ya no debe, se limpia el estado
+            if (visit_status === "LLESO" && nuevaDeuda <= 0) {
+                estadoParaCliente = null;
+            }
+
+            // Actualizamos el estado específico en la tabla customers
+            await connection.query(
+                `UPDATE customers SET visit_status_c = ? WHERE id = ?`,
+                [estadoParaCliente, customer_id]
+            );
+
+            // 2. REGISTRAR EN LA TABLA SALES (visit_status)
             const [saleRes] = await connection.query(
                 `INSERT INTO sales (
-                    order_id, customer_id, seller_name, 
-                    visit_status, total_amount, amount_paid, credit_amount, balance_due
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    order_id, customer_id, seller_name,
-                    visit_status, m_totalVentaHoy, pagoVentaHoy, n_abonoDeudaVieja, saldoFinalCalculado
-                ]
+                    order_id, 
+                    customer_id, 
+                    total_amount, 
+                    amount_paid, 
+                    visit_status, 
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, NOW())`,
+                [order_id, customer_id, m_totalVentaHoy, efectivoTotalRecibido, visit_status]
             );
 
-            // 4. REGISTRAR LOS PRODUCTOS (Sale Items)
-            for (const item of venta.items) {
-                await connection.query(
-                    `INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, total_price) 
-                     VALUES (?, ?, ?, ?, ?, ?)`,
-                    [
-                        saleRes.insertId, item.product_id, item.product_name,
-                        item.quantity, item.unit_price, item.total_price
-                    ]
-                );
+            const saleId = saleRes.insertId;
+
+            // 3. REGISTRAR ITEMS
+            if (items && items.length > 0) {
+                for (const item of items) {
+                    await connection.query(
+                        `INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, total_price) 
+                         VALUES (?, ?, ?, ?, ?)`,
+                        [
+                            saleId,
+                            item.product_id, // <--- CORRECCIÓN: Agregar "item." antes
+                            item.quantity,
+                            item.unit_price,
+                            item.total_price
+                        ]
+                    );
+                }
             }
         }
 
-        await connection.query("UPDATE orders SET status = 'PAGADO' WHERE id = ?", [order_id]);
+        // 4. FINALIZAR ORDEN
+        await connection.query("UPDATE orders SET status = 'LIQUIDADO' WHERE id = ?", [order_id]);
+
         await connection.commit();
-        res.status(201).json({ success: true, message: "Venta y Abono registrados correctamente" });
+        res.status(201).json({ success: true, message: "Liquidación completada exitosamente" });
 
     } catch (error) {
         await connection.rollback();
+        console.error("Error en createSale:", error);
         res.status(500).json({ success: false, message: error.message });
     } finally {
         connection.release();
     }
 };
+
 const getSales = async (req, res) => {
     try {
+        // Obtenemos un resumen de las rutas liquidadas
         const [rows] = await db.query(`
-            SELECT DISTINCT 
-                order_id, 
-                seller_name, 
-                credit_amount, 
-                created_at 
-            FROM sales 
-            GROUP BY order_id
-            ORDER BY created_at DESC
+            SELECT 
+                s.order_id, 
+                o.seller_name, 
+                SUM(s.total_amount) as total_ruta,
+                o.created_at 
+            FROM sales s
+            JOIN orders o ON s.order_id = o.id
+            GROUP BY s.order_id
+            ORDER BY o.created_at DESC
         `);
         res.json(rows);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 const getRutaCompleta = async (req, res) => {
     const { orderId } = req.params;
     try {
@@ -111,8 +129,8 @@ const getRutaCompleta = async (req, res) => {
                 c.address AS direccion,
                 s.visit_status AS estado,
                 s.total_amount AS venta,
-                s.amount_paid AS pago,
-                s.credit_amount AS abono,
+                c.total_debt AS debe,
+                s.amount_paid AS abono,
                 c.phone AS telefono
             FROM sales s
             JOIN customers c ON s.customer_id = c.id
@@ -125,4 +143,37 @@ const getRutaCompleta = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-module.exports = { createSale, getSales, getRutaCompleta };
+// --- NUEVA FUNCIÓN PARA LA CONSULTA DE LA IMAGEN 2 ---
+const getSettlementByOrder = async (req, res) => {
+    const { orderId } = req.params;
+    try {
+        const [rows] = await db.query(`
+            SELECT 
+                id, 
+                order_id, 
+                user_id, 
+                total_recaudado, 
+                ventas_totales, 
+                cartera_anterior, 
+                valor_almuerzo, 
+                valor_gasolina, 
+                ganancia_vendedor, 
+                efectivo_fisico, 
+                diferencia, 
+                created_at 
+            FROM m_g_settlements 
+            WHERE order_id = ?
+        `, [orderId]);
+
+        // Retornamos el primer resultado (debería ser único por orden)
+        if (rows.length > 0) {
+            res.json(rows[0]);
+        } else {
+            res.status(404).json({ success: false, message: "No se encontró liquidación para esta orden" });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+module.exports = { createSale, getSales, getRutaCompleta ,getSettlementByOrder };

@@ -18,7 +18,8 @@ export default function DespachoPage() {
     const [customerTypeId, setCustomerTypeId] = useState("4"); // 4: Despacho Mayorista
     const [sellerName, setSellerName] = useState("");
     const [quantities, setQuantities] = useState({});
-
+    // 1. Nuevo estado para el valor del escáner
+    const [scannerInput, setScannerInput] = useState("");
     useEffect(() => {
         loadProducts();
     }, []);
@@ -97,6 +98,30 @@ export default function DespachoPage() {
             }
         }
     };
+    // 2. Función para manejar el pistoleo
+    const handleBarcodeScan = (e) => {
+        if (e.key === 'Enter') {
+            const barcode = scannerInput.trim();
+            // Buscamos el producto por código (asegúrate de tener un campo 'barcode' en tus productos)
+            const product = products.find(p => p.barcode === barcode);
+
+            if (product) {
+                // Si existe, incrementamos la cantidad actual en +1
+                const currentQty = Number(quantities[product.id] || 0);
+                if (currentQty < product.stock) {
+                    setQuantities(prev => ({
+                        ...prev,
+                        [product.id]: currentQty + 1
+                    }));
+                } else {
+                    alertError("Stock limitado", "No hay más stock disponible para este producto.");
+                }
+            } else {
+                alertError("No encontrado", "Producto no registrado con ese código.");
+            }
+            setScannerInput(""); // Limpiamos para el siguiente escaneo
+        }
+    };
 
     return (
         <div className="inv-page full-layout">
@@ -137,6 +162,15 @@ export default function DespachoPage() {
                         style={{ width: '80%', paddingLeft: '45px', height: '45px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                         placeholder="Filtrar productos por nombre..."
                         onChange={e => setSearchTerm(e.target.value)}
+                    />
+                    <input
+                        type="text"
+                        placeholder="Pistolea el código aquí..."
+                        value={scannerInput}
+                        onChange={(e) => setScannerInput(e.target.value)}
+                        onKeyDown={handleBarcodeScan}
+                        className="input-group"
+                        style={{ width: '20%', marginBottom: '10px', border: '2px solid #dc193d' }}
                     />
                 </div>
 
@@ -182,7 +216,19 @@ export default function DespachoPage() {
                     </table>
                 </div>
 
-                <div className="form-actions" style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* SECCIÓN MODIFICADA: Ahora es 'sticky' para que no se pierda al hacer scroll */}
+                <div className="form-actions" style={{
+                    marginTop: '30px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    position: 'sticky',
+                    bottom: '0',
+                    backgroundColor: 'white',
+                    padding: '20px 0',
+                    borderTop: '2px solid #eee',
+                    zIndex: 10
+                }}>
                     <div style={{ fontSize: '22px', fontWeight: '800' }}>
                         TOTAL: <span style={{ color: 'var(--primary)' }}>${totalDespacho.toLocaleString()}</span>
                     </div>

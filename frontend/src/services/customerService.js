@@ -1,25 +1,44 @@
 import api from "./api";
 
 export const customerService = {
-    /**
-     * Obtiene la lista de clientes con sus deudas acumuladas
-     */
-    getBalances: async () => {
+
+    getBalances: async (sellerId, visitDay = null) => {
         try {
-            const response = await api.get("/customers/balances");
-            return response.data.data; // Retorna el array de clientes con saldos
+            // 1. Empezamos con el seller_id que es obligatorio
+            let url = `/customers/balances?seller_id=${sellerId}`;
+
+            // 2. Si se proporciona un día, lo concatenamos a la URL
+            if (visitDay) {
+                url += `&visit_day=${visitDay}`;
+            }
+
+            const response = await api.get(url);
+            return response.data.data;
         } catch (error) {
-            console.error("Error en customerService:", error);
             throw error;
         }
     },
-    // Nueva función
     createCustomer: async (customerData) => {
         try {
+            // Asegúrate de que tu ruta en el backend coincida con "/customers/create"
             const response = await api.post("/customers/create", customerData);
-            return response.data.data; 
+            return response.data.data;
         } catch (error) {
-            console.error("Error al crear cliente:", error);
+            // Manejo de errores más descriptivo
+            const message = error.response?.data?.message || "Error al conectar con el servidor";
+            console.error("Error al crear cliente:", message);
+            throw new Error(message);
+        }
+    },
+    getDetailedList: async (sellerId = null, visitDay = null) => {
+        try {
+            let url = `/customers/list-detailed?`;
+            if (sellerId) url += `seller_id=${sellerId}&`;
+            if (visitDay) url += `visit_day=${visitDay}`;
+
+            const response = await api.get(url);
+            return response.data.data;
+        } catch (error) {
             throw error;
         }
     }
