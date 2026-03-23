@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { orderService } from '../services/orderService';
 
 const SettlementModule = () => {
     const { orderId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation(); 
+    
+    // 1. Recuperamos el valor calculado en DevolucionesPage (Total Surtido)
+    const totalSurtidoDesdePlanilla = location.state?.totalSurtido;
+
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Estados para los inputs (el usuario digita ej: 56 para representar 56.000)
     const [efectivoFisico, setEfectivoFisico] = useState(0);
     const [valorAlmuerzo, setValorAlmuerzo] = useState(0);
     const [valorGasolina, setValorGasolina] = useState(0);
@@ -21,7 +25,6 @@ const SettlementModule = () => {
                 setData(response);
 
                 if (response.status === 'LIQUIDADO') {
-                    // Si ya está cerrado, dividimos por 1000 para mostrar el número corto en el input
                     setEfectivoFisico((response.efectivo_fisico || 0) / 1000);
                     setValorAlmuerzo((response.valor_almuerzo || 0) / 1000);
                     setValorGasolina((response.valor_gasolina || 0) / 1000);
@@ -40,22 +43,22 @@ const SettlementModule = () => {
 
     if (loading) return <div className="p-5 text-center">Calculando balance de ruta...</div>;
 
-    // --- LÓGICA DE CÁLCULOS (REPLICANDO IMAGEN 1) ---
-    const recaude_abono = parseFloat(data?.total_recaudado || 0); // Ej: 0
-    const venta_hoy = parseFloat(data?.ventas_totales_hoy || 0);  // Ej: 0 (Surtido)
-    const debe_ruta = parseFloat(data?.cartera_anterior || 0);    // Ej: 190000
+    // --- LÓGICA DE CÁLCULOS ---
+    const recaude_abono = parseFloat(data?.total_recaudado || 0);
+    const debe_ruta = parseFloat(data?.cartera_anterior || 0);
 
-    // Convertimos inputs a miles
+    // 2. Prioridad: Si venimos de la planilla, usamos ese total. Si no, lo que diga la base de datos.
+    const venta_hoy = totalSurtidoDesdePlanilla !== undefined 
+        ? parseFloat(totalSurtidoDesdePlanilla) 
+        : parseFloat(data?.ventas_totales_hoy || 0);
+
     const gastoAlmuerzo = parseFloat(valorAlmuerzo || 0);
     const gastoGasolina = parseFloat(valorGasolina || 0);
     const efectivoEntregadoReal = parseFloat(efectivoFisico || 0);
 
-    // GANANCIA NETA = Abonos - Surtido - Gastos
+    // Los cálculos ahora usan el valor actualizado de venta_hoy
     const ganancia_vendedor = recaude_abono - venta_hoy - (gastoAlmuerzo + gastoGasolina);
-
-    // FALTA = Ganancia Neta + Efectivo Entregado
     const falta = ganancia_vendedor + efectivoEntregadoReal;
-
     const totalSaldoFinal = debe_ruta + venta_hoy - recaude_abono;
 
     const handleFinalizar = async () => {
@@ -65,9 +68,9 @@ const SettlementModule = () => {
             const settlementData = {
                 user_id: data?.user_id,
                 total_recaudado: recaude_abono,
-                ventas_totales: venta_hoy,
+                ventas_totales: venta_hoy, // Se guarda el valor corregido
                 cartera_anterior: debe_ruta,
-                valor_almuerzo: gastoAlmuerzo * 1000, // Multiplicamos para guardar el valor real
+                valor_almuerzo: gastoAlmuerzo * 1000,
                 valor_gasolina: gastoGasolina * 1000,
                 ganancia_vendedor: ganancia_vendedor,
                 efectivo_fisico: efectivoEntregadoReal * 1000,
@@ -77,8 +80,6 @@ const SettlementModule = () => {
 
             await orderService.settleOrder(orderId, settlementData);
             alert("Liquidación guardada con éxito.");
-
-            // REDIRECCIÓN A LA TABLA DE LA IMAGEN 2
             navigate(`/ventas-detalle/${orderId}`);
         } catch (error) {
             alert("Error al finalizar: " + error);
@@ -119,7 +120,7 @@ const SettlementModule = () => {
                         </div>
                     </div>
 
-                    {/* INPUTS DE GASTOS */}
+                    {/* GASTOS */}
                     <div className="row g-3 mb-4">
                         <div className="col-6">
                             <label className="fw-bold small">ALMUERZO (Miles)</label>
@@ -143,12 +144,14 @@ const SettlementModule = () => {
                         </div>
                     </div>
 
-                    {/* SURTIDO Y GANANCIA NETA */}
+                    {/* SURTIDO Y GANANCIA */}
                     <div className="row g-2 mb-4">
                         <div className="col-6">
                             <div className="p-3 border rounded bg-light">
                                 <small className="text-muted d-block">SURTIDO</small>
-                                <span className="fw-bold text-danger">$ {venta_hoy.toLocaleString()}</span>
+                                <span className="fw-bold text-danger">
+                                    $ {venta_hoy.toLocaleString()}
+                                </span>
                             </div>
                         </div>
                         <div className="col-6">
@@ -177,7 +180,7 @@ const SettlementModule = () => {
                         </div>
                     </div>
 
-                    {/* RESULTADO FINAL: FALTA */}
+                    {/* RESULTADO FINAL */}
                     <div className={`p-3 border rounded mb-4 text-center ${falta < 0 ? 'bg-light-danger' : 'bg-light-success'}`}
                         style={{ backgroundColor: falta < 0 ? '#fee2e2' : '#dcfce7' }}>
                         <small className={`fw-bold d-block ${falta < 0 ? 'text-danger' : 'text-success'}`}>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/login.css";
-import logo from "../assets/logo.jpeg";
+import logo from "../assets/logo.png";
 import { Truck } from 'lucide-react'; 
 import Footer from "../components/footer";
 import { loginUser } from "../services/authService";
@@ -73,7 +73,7 @@ function Login() {
             <div className="floating-icon">
               <Truck size={80} strokeWidth={1.5} />
             </div>
-            <h1>Mayorista <span>Gallego</span></h1>
+            <h1>Nova <span>Forge</span></h1>
             <div className="divider"></div>
             <p>
               Calidad y confianza en la distribución de alimentos al por mayor y detal.

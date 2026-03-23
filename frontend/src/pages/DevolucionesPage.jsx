@@ -1,178 +1,184 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
-import { alertSuccess, alertError } from "../services/alertService";
-import { ChevronLeft } from "lucide-react";
+import { alertError } from "../services/alertService";
+import "../styles/devoluciones.css";
 
 export default function DevolucionesPage() {
     const location = useLocation();
     const navigate = useNavigate();
-
     const { orderId, sobrantes } = location.state || {};
 
     const [itemsDevolver, setItemsDevolver] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(true);
-    const [esHistorial, setEsHistorial] = useState(false);
-
-    const [estaLiquidado, setEstaLiquidado] = useState(false); // <--- NUEV ESTADO
+    const [procesando, setProcesando] = useState(false);
+    
+    // NUEVO: Estado para saber si la liquidación ya está cerrada
+    const [esLiquidado, setEsLiquidado] = useState(false);
+    
+    const barcodeBuffer = useRef("");
 
     useEffect(() => {
-        if (!orderId) {
-            alertError("Error", "No hay una orden seleccionada.");
-            navigate("/liquidaciones");
-            return;
-        }
-
+        if (!orderId) { navigate("/liquidaciones"); return; }
         const inicializarPagina = async () => {
             setLoading(true);
             try {
+                // Consultamos el estado actual de la orden al servicio
+                const infoOrden = await orderService.settleOrder(orderId);
+                setEsLiquidado(infoOrden.status === 'LIQUIDADO');
 
-                // 1. Verificamos si ya existe liquidación económica en m_g_settlements
-                // Debes asegurarte que settleOrder(orderId) devuelva algo que indique si ya existe
-                const checkLiquidacion = await orderService.settleOrder(orderId);
-                if (checkLiquidacion && checkLiquidacion.ya_liquidado) {
-                    setEstaLiquidado(true);
-                }
-                // 1. Intentamos traer historial de la DB
-                const historial = await orderService.getReturnHistory(orderId);
-                
-                if (historial && historial.length > 0) {
-                    setItemsDevolver(historial.map(h => ({
-                        product_id: h.product_id,
-                        product_name: h.product_name,
-                        stock_en_sistema: h.cantidad_devuelta,
-                        cantidad_a_devolver: h.cantidad_devuelta,
-                    })));
-                    setEsHistorial(true);
-                } 
-                // 2. Si no hay historial, cargamos lo que viene de Ventas o calculamos del camión
-                else {
-                    const stockCalculado = sobrantes || await orderService.getTruckInventory(orderId);
-                    
-                    setItemsDevolver(stockCalculado.map(item => ({
-                        product_id: item.product_id,
-                        product_name: item.product_name,
-                        stock_en_sistema: item.cantidad_sobrante || item.stock_en_camion,
-                        cantidad_a_devolver: item.cantidad_sobrante || item.stock_en_camion
-                    })));
-                    setEsHistorial(false);
-                }
-            } catch (err) {
-                alertError("Error", "No se pudieron cargar los datos de inventario.");
-            } finally {
-                setLoading(false);
-            }
+                const data = sobrantes || await orderService.getTruckInventory(orderId);
+                setItemsDevolver(data.map(item => ({
+                    codg_barras: String(item.codg_barras || '').trim(),
+                    product_id: item.product_id || 'N/A',
+                    product_name: item.product_name || 'Producto',
+                    despachado: Number(item.despachado) || 0,
+                    precio_base: Number(item.precio_base) || 0,
+                    cantidad_a_devolver: Number(item.cantidad_a_devolver) || 0
+                })));
+            } catch (err) { alertError("Error", "No se pudo cargar la planilla."); }
+            finally { setLoading(false); }
         };
-
         inicializarPagina();
     }, [orderId, sobrantes, navigate]);
 
-    const handleCantidadChange = (id, valor) => {
-        const nuevaLista = itemsDevolver.map(item => {
-            if (item.product_id === id) {
-                return { ...item, cantidad_a_devolver: parseInt(valor) || 0 };
-            }
-            return item;
-        });
-        setItemsDevolver(nuevaLista);
-    };
-
-    // FUNCIÓN UNIFICADA: Procesa devolución O salta a liquidación
-    const handleAccionPrincipal = async () => {
-        // Si ya está liquidado económicamente, el botón no debería hacer nada (o estar deshabilitado)
-        if (estaLiquidado) return;
-
-        if (esHistorial) {
-            // Si ya se hizo, solo navegamos a la liquidación financiera
-            navigate(`/liquidacion-ruta/${orderId}`);
-            return;
-        }
-
-        try {
-            const payload = {
-                order_id: orderId,
-                items: itemsDevolver.filter(i => i.cantidad_a_devolver > 0)
-            };
-
-            await orderService.processReturn(payload);
-            alertSuccess("Éxito", "El stock ha sido reintegrado al almacén.");
+    // LÓGICA DE ESCANEO (Bloqueada si esLiquidado es true)
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (esLiquidado) return; // NO permitir escaneo si ya se liquidó
             
-            // Una vez procesada la devolución física, vamos a la liquidación de dinero
-            navigate(`/liquidacion-ruta/${orderId}`);
-        } catch (err) {
-            alertError("Error", "No se pudo procesar la devolución.");
+            if (document.activeElement.tagName === "INPUT" && document.activeElement.type === "text") return;
+
+            if (e.key === "Enter") {
+                const code = barcodeBuffer.current;
+                if (code) {
+                    setItemsDevolver(prev => prev.map(item => 
+                        item.codg_barras === code 
+                        ? { ...item, cantidad_a_devolver: item.cantidad_a_devolver + 1 }
+                        : item
+                    ));
+                }
+                barcodeBuffer.current = "";
+            } else {
+                if (e.key.length === 1) {
+                    barcodeBuffer.current += e.key;
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [esLiquidado]); // Escuchar cambios en esLiquidado
+
+    const handleCantidadChange = (id, valor) => {
+        if (esLiquidado) return; // Bloqueo de seguridad adicional
+        setItemsDevolver(prev => prev.map(item =>
+            item.product_id === id ? { ...item, cantidad_a_devolver: Number(valor) || 0 } : item
+        ));
+    };
+
+    const handleLiquidacion = async () => {
+        if (esLiquidado) return;
+        setProcesando(true);
+        try {
+            navigate(`/liquidacion-ruta/${orderId}`, { state: { totalSurtido: totalSuma } });
+        } catch (error) {
+            alertError("Error", "No se pudo procesar la liquidación");
+        } finally {
+            setProcesando(false);
         }
     };
 
-    if (loading) return <div className="loading-screen">Cargando inventario...</div>;
+    const itemsFiltrados = itemsDevolver.filter(item => 
+        item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.codg_barras.includes(searchTerm)
+    );
+
+    const totalSuma = itemsDevolver.reduce((acc, item) => {
+        const venta = item.despachado - item.cantidad_a_devolver;
+        return acc + (venta * item.precio_base);
+    }, 0);
+
+    if (loading) return <div className="loading-state">Cargando...</div>;
 
     return (
         <div className="devoluciones-container">
-            <header className="header-actions">
-                <button onClick={() => navigate("/liquidaciones")} className="btn-back-list">
-                    <ChevronLeft size={20} /> Volver
-                </button>
+            <div className="header-actions">
+                <button className="btn-back" onClick={() => navigate(-1)}>← Volver</button>
+                <h2>Planilla de Devoluciones {esLiquidado && "(CERRADA)"}</h2>
+            </div>
 
-
-                <h2 className="ruta-title">Liquidación de Inventario - Despacho #{orderId}</h2>
-                
-               <button
-                    onClick={handleAccionPrincipal}
-                    // Deshabilitamos si ya está liquidado
-                    disabled={estaLiquidado}
-                    className={`btn-confirm-all ${esHistorial ? 'btn-history' : ''} ${estaLiquidado ? 'btn-disabled' : ''}`}
-                    style={estaLiquidado ? { opacity: 0.5, cursor: 'not-allowed', backgroundColor: '#6c757d' } : {}}
-                >
-                    {estaLiquidado 
-                        ? "Ruta Finalizada (Liquidada)" 
-                        : esHistorial 
-                            ? "Siguiente: Liquidar Dinero" 
-                            : "Confirmar Devolución"}
-                </button>
-            </header>
+            <div className="search-container" style={{ marginBottom: '20px' }}>
+                <input 
+                    type="text" 
+                    placeholder={esLiquidado ? "Lectura bloqueada: Orden Liquidada" : "Buscar por nombre o código de barras..."}
+                    className="input-search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    disabled={esLiquidado} // Bloqueo de buscador
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc', backgroundColor: esLiquidado ? '#f0f0f0' : '#fff' }}
+                />
+            </div>
 
             <div className="planilla-wrapper">
-                <table className="excel-table">
+                <table className="modern-table">
                     <thead>
                         <tr>
-                            <th>PRODUCTO</th>
-                            <th>STOCK EN CAMIÓN</th>
-                            <th>CANT. A DEVOLVER</th>
-                            <th>ESTADO</th>
+                            <th>CODIGO</th>
+                            <th>PRODUCTOS</th>
+                            <th>LLEVA</th>
+                            <th>TRAE</th>
+                            <th>VENTA</th>
+                            <th>PRECIO</th>
+                            <th>TOTAL</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {itemsDevolver.map((item) => (
-                            <tr key={item.product_id}>
-                                <td>{item.product_name}</td>
-                                <td>{item.stock_en_sistema}</td>
-                                <td>
-                                    <input
-                                        type="number"
-                                        className="input-modern"
-                                        value={item.cantidad_a_devolver}
-                                        onChange={(e) => handleCantidadChange(item.product_id, e.target.value)}
-                                        disabled={esHistorial}
-                                        style={esHistorial ? { backgroundColor: '#f5f5f5', cursor: 'not-allowed', border: 'none' } : {}}
-                                    />
-                                </td>
-                                <td>
-                                    {item.cantidad_a_devolver === item.stock_en_sistema ?
-                                        <span className="badge-ok">CORRECTO</span> :
-                                        <span className="badge-warning">DESCUADRE</span>
-                                    }
-                                </td>
-                            </tr>
-                        ))}
+                        {itemsFiltrados.map((item) => {
+                            const venta = item.despachado - item.cantidad_a_devolver;
+                            const total = venta * item.precio_base;
+                            return (
+                                <tr key={item.product_id}>
+                                    <td className="text-center">{item.codg_barras}</td>
+                                    <td>{item.product_name}</td>
+                                    <td className="text-center">{item.despachado}</td>
+                                    <td>
+                                        <input 
+                                            type="number" 
+                                            className="input-minimal" 
+                                            value={item.cantidad_a_devolver}
+                                            onChange={(e) => handleCantidadChange(item.product_id, e.target.value)} 
+                                            disabled={esLiquidado} // Bloqueo de inputs de tabla
+                                            style={{ backgroundColor: esLiquidado ? 'transparent' : '#fff', border: esLiquidado ? 'none' : '1px solid #ccc' }}
+                                        />
+                                    </td>
+                                    <td className="text-center">{venta}</td>
+                                    <td className="text-right">{item.precio_base.toLocaleString()}</td>
+                                    <td className="text-right">{total.toLocaleString()}</td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colSpan="6" className="text-right"><strong>TOTAL SURTIDO</strong></td>
+                            <td className="text-right"><strong>$ {totalSuma.toLocaleString()}</strong></td>
+                        </tr>
+                    </tfoot>
                 </table>
-            </div>
-            
-            {esHistorial && (
-                <div className="alert-info-history">
-                    * Esta devolución ya fue procesada. Haga clic en el botón superior para realizar el cierre económico.
+
+                <div className="footer-actions">
+                    <button 
+                        className="btn-liquidar" 
+                        onClick={handleLiquidacion} 
+                        disabled={procesando || esLiquidado} // Bloqueo de botón final
+                        style={{ backgroundColor: esLiquidado ? '#6c757d' : '' }}
+                    >
+                        {esLiquidado ? "ORDEN YA LIQUIDADA" : procesando ? "Procesando..." : "Finalizar Liquidación"}
+                    </button>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

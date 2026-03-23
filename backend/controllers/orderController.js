@@ -323,10 +323,12 @@ const getTruckInventory = async (req, res) => {
     try {
         // Esta consulta busca lo que se despachó y le resta lo que se vendió en esa orden
         const [rows] = await db.query(
-            `SELECT 
+            `SELECT
+                p.barcode AS codg_barras,
                 oi.product_id, 
                 p.name as product_name, 
                 oi.quantity as despachado,
+                oi.unit_price AS precio_base,
                 IFNULL((SELECT SUM(si.quantity) 
                         FROM sale_items si 
                         JOIN sales s ON si.sale_id = s.id 
@@ -340,9 +342,12 @@ const getTruckInventory = async (req, res) => {
 
         // Calculamos el sobrante real
         const stockEnCamion = rows.map(item => ({
+            codg_barras:item.codg_barras,
             product_id: item.product_id,
             product_name: item.product_name,
-            cantidad_sobrante: item.despachado - item.vendido
+            despachado: item.despachado,
+            cantidad_sobrante: item.despachado - item.vendido,
+            precio_base: item.precio_base,
         }));
 
         res.json(stockEnCamion);

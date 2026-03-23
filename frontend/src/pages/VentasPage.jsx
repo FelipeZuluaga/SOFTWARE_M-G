@@ -984,7 +984,7 @@ export default function VentasPage() {
                                 {ordenesFiltradas.length > 0 ? (
                                     ordenesFiltradas.map(o => (
                                         <tr key={o.id}>
-                                            <td style={{ fontWeight: 'bold', color: '#be2b48' }}>#{o.id}</td>
+                                            <td style={{ fontWeight: 'bold', color: '#0d2a4d' }}>#{o.id}</td>
                                             <td>{new Date(o.created_at).toLocaleDateString()}</td>
                                             <td>{o.seller_name}</td>
                                             <td>
@@ -1046,8 +1046,6 @@ export default function VentasPage() {
 
                         <div className="header-center">
                             <h3 className="ruta-title">Hoja de Ruta: {selectedOrder.seller_name}</h3>
-                            {/* 2. Cambiamos el texto estático por la variable fechaHoy */}
-                            <p className="ruta-subtitle">FECHA: {fechaHoy.toUpperCase()}</p>
                         </div>
 
                         <div className="header-right">

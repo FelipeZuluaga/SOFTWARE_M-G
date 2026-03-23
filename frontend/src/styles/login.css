@@ -30,8 +30,8 @@
 .overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    /* Usamos la variable --primary-color para consistencia */
-    background: linear-gradient(135deg, rgba(155, 17, 30, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%);
+    /* Degradado utilizando tus colores corporativos (Azul oscuro a Azul intermedio) */
+    background: linear-gradient(135deg, rgba(13, 42, 77, 0.95) 0%, rgba(30, 64, 175, 0.8) 100%);
 }
 
 .left-content {

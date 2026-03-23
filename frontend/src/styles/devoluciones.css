@@ -1,0 +1,96 @@
+/* Contenedor principal */
+.devoluciones-container {
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* Encabezado y botones */
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eee;
+}
+
+.ruta-title {
+    color: #333;
+    font-size: 1.25rem;
+}
+
+/* Tabla Estilo Excel */
+.planilla-wrapper {
+    border: 1px solid #999; /* Borde exterior de la "hoja" */
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+}
+
+.modern-table {
+    width: 100%;
+    border-collapse: collapse; /* Crucial para el efecto Excel */
+    background-color: #fff;
+}
+
+/* Cabecera (Azul profesional) */
+.modern-table thead tr {
+    background-color: #4a86e8;
+    color: white;
+}
+
+.modern-table th {
+    border: 1px solid #3d70c4;
+    padding: 10px;
+    font-size: 13px;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+/* Celdas del cuerpo */
+.modern-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    font-size: 14px;
+    color: #222;
+}
+
+/* Input Minimalista (sin bordes redondeados para parecer celda de Excel) */
+.input-minimal {
+    width: 60px;
+    border: 1px solid #aaa;
+    padding: 4px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.input-minimal:focus {
+    outline: 2px solid #4a86e8;
+    background-color: #f0f7ff;
+}
+
+/* Filas alternas (Zebra striping) */
+.modern-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Efecto al pasar el mouse */
+.modern-table tbody tr:hover {
+    background-color: #e8f0fe;
+}
+
+/* Mensaje inferior */
+.alert-info-history {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+    font-size: 0.9rem;
+    border-radius: 4px;
+}
+/* Agrega esto a tu CSS si quieres alinear precios a la derecha */
+.modern-table td:nth-child(6), 
+.modern-table td:nth-child(7) {
+    text-align: right;
+}

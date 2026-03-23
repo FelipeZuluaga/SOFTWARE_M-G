@@ -40,7 +40,18 @@ export default function InventoryPage() {
             setForm(prev => ({ ...prev, barcode: generateNextBarcode() }));
         }
     }, [products]); // Se recalcula si la lista de productos cambia
+    // --- NUEVO: Lógica del Carrusel (Añade esto aquí) ---
+    useEffect(() => {
+        // Creamos un intervalo que cambia el tipo de cliente cada 5 segundos
+        const interval = setInterval(() => {
+            setCurrentTypeIndex((prevIndex) => 
+                prevIndex === CUSTOMER_TYPES.length - 1 ? 0 : prevIndex + 1
+            );
+        }, 5000);
 
+        // Limpieza: si el usuario sale de la página, el reloj se detiene
+        return () => clearInterval(interval);
+    }, []);
     const loadData = async () => {
         try {
             const [prodData, catData] = await Promise.all([

@@ -120,7 +120,7 @@
     width: 100%;
     padding: 4px;
     font-size: 11px;
-    border: 1px dashed #be2b48;
+    border: 1px dashed #0d2a4d;
     border-radius: 4px;
     margin-bottom: 8px;
     cursor: pointer;
@@ -161,13 +161,13 @@
 .btn-del-prod {
     background: none;
     border: none;
-    color: #ef4444;
+    color: #0d2a4d;
     cursor: pointer;
     padding: 2px;
 }
 
 .btn-del-prod:hover {
-    color: #b91c1c;
+    color: #0d2a4d;
 }
 
 .total-cell {
@@ -227,7 +227,7 @@
 }
 
 .stock-badge {
-    color: #be2b48;
+    color: #0d2a4d;
     font-weight: bold;
 }
 
@@ -255,7 +255,7 @@
 }
 
 .btn-save-modal {
-    background: #be2b48;
+    background: #0d2a4d;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -278,8 +278,8 @@
 
 .btn-download-pdf {
     background: #fff0f0;
-    border: 1px solid #be2b48;
-    color: #be2b48;
+    border: 1px solid #0d2a4d;
+    color: #0d2a4d;
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 11px;
@@ -291,7 +291,7 @@
 }
 
 .btn-download-pdf:hover {
-    background: #be2b48;
+    background: #0d2a4d;
     color: white;
 }
 
@@ -441,7 +441,7 @@
 }
 
 .ruta-subtitle svg {
-    color: #be2b48;
+    color: #0d2a4d;
     /* Color de énfasis para el ícono del reloj */
 }
 
@@ -462,7 +462,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #b9101b;
+    background: #0d2a4d;
     /* Verde esmeralda */
     color: white;
     border: none;
@@ -475,7 +475,7 @@
 }
 
 .btn-add-customer:hover {
-    background: #902c35;
+    background: #0d2a4d;
 }
 
 .form-group {
@@ -532,11 +532,11 @@
 }
 
 .btn-dia.selected {
-    background: #be2b48;
+    background: #0d2a4d;
     /* Tu color guinda/rojo */
     color: white;
-    border-color: #be2b48;
-    box-shadow: 0 4px 12px rgba(190, 43, 72, 0.3);
+    border-color: #0d2a4d;
+    box-shadow: 0 4px 12px rgba(27, 1, 112, 0.3);
     transform: translateY(-2px);
 }
 
@@ -928,7 +928,7 @@
 }
 
 .input-modern:focus {
-    border-color: #be2b48;
+    border-color: #0d2a4d;
     box-shadow: 0 0 0 4px rgba(190, 43, 72, 0.1);
     outline: none;
 }
@@ -946,12 +946,12 @@
 .total-amount {
     font-size: 2rem;
     font-weight: 900;
-    color: #be2b48;
+    color: #0d2a4d;
     margin-left: 15px;
 }
 
 .btn-confirm-final {
-    background: #be2b48;
+    background: #0d2a4d;
     color: white;
     padding: 15px 35px;
     border-radius: 12px;
@@ -970,7 +970,7 @@
 }
 
 .subtotal-cell.active-amount {
-    color: #be2b48;
+    color: #0d2a4d;
     font-weight: 800;
 }
 
@@ -992,7 +992,7 @@ input::-webkit-inner-spin-button {
 
 .input-search-planilla:focus {
     outline: none;
-    border-color: #be2b48;
+    border-color: #0d2a4d;
     box-shadow: 0 0 0 2px rgba(190, 43, 72, 0.1);
 }
 
@@ -1031,7 +1031,7 @@ input::-webkit-inner-spin-button {
 }
 
 .icon-header {
-    color: #be2b48;
+    color: #0d2a4d;
 }
 
 /* Secciones del Formulario */
@@ -1075,7 +1075,7 @@ input::-webkit-inner-spin-button {
 
 .form-control:focus,
 .form-select:focus {
-    border-color: #be2b48;
+    border-color: #0d2a4d;
     box-shadow: 0 0 0 3px rgba(190, 43, 72, 0.1);
     outline: none;
 }
@@ -1113,7 +1113,7 @@ input::-webkit-inner-spin-button {
 .btn-primary-action {
     padding: 10px 25px;
     border-radius: 10px;
-    background: #be2b48;
+    background: #0d2a4d;
     color: white;
     font-weight: 600;
     border: none;
@@ -1123,7 +1123,7 @@ input::-webkit-inner-spin-button {
 }
 
 .btn-primary-action:hover:not(:disabled) {
-    background: #a0243d;
+    background: #0d2a4d;
     transform: translateY(-1px);
 }
 
@@ -1162,4 +1162,22 @@ input::-webkit-inner-spin-button {
     /* Reducimos padding para que no sobre espacio */
     width: 110px;
     /* Definimos un ancho fijo para que la columna sea delgada */
+}
+.header-right {
+    display: flex;       /* Activa el modo flexible */
+    align-items: center; /* Alinea los botones verticalmente al centro */
+    gap: 12px;           /* <--- Esto crea la separación exacta entre los botones */
+    flex-wrap: wrap;    /* Por si la pantalla es pequeña, que no se amontonen */
+}
+
+/* Opcional: Para que todos los botones tengan el mismo estilo de espaciado interno */
+.header-right button {
+    display: flex;
+    align-items: center;
+    gap: 8px;            /* Espacio entre el icono y el texto dentro del botón */
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
 }

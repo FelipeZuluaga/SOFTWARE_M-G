@@ -155,23 +155,57 @@ export default function DespachoPage() {
                     </div>
                 </div>
 
-                <div className="search-bar-container" style={{ margin: '25px 0', position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '15px', top: '13px', color: '#dc193d' }} />
-                    <input
-                        className="input-group input"
-                        style={{ width: '80%', paddingLeft: '45px', height: '45px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        placeholder="Filtrar productos por nombre..."
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
-                    <input
-                        type="text"
-                        placeholder="Pistolea el código aquí..."
-                        value={scannerInput}
-                        onChange={(e) => setScannerInput(e.target.value)}
-                        onKeyDown={handleBarcodeScan}
-                        className="input-group"
-                        style={{ width: '20%', marginBottom: '10px', border: '2px solid #dc193d' }}
-                    />
+                <div className="search-controls-wrapper" style={{
+                    display: 'flex',
+                    gap: '15px',
+                    margin: '25px 0',
+                    alignItems: 'center'
+                }}>
+                    {/* Buscador por Nombre */}
+                    <div style={{ position: 'relative', flex: '2' }}>
+                        <Search size={18} style={{
+                            position: 'absolute',
+                            left: '15px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: '#94a3b8'
+                        }} />
+                        <input
+                            className="input-group-field"
+                            style={{
+                                width: '100%',
+                                padding: '12px 15px 12px 45px',
+                                borderRadius: '8px',
+                                border: '1px solid #e2e8f0',
+                                fontSize: '14px',
+                                outline: 'none'
+                            }}
+                            placeholder="Filtrar productos por nombre..."
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Buscador por Pistola (Escáner) */}
+                    <div style={{ position: 'relative', flex: '1' }}>
+                        <input
+                            type="text"
+                            autoFocus // Para que siempre esté listo para recibir el código
+                            placeholder="Pistolea el código aquí..."
+                            value={scannerInput}
+                            onChange={(e) => setScannerInput(e.target.value)}
+                            onKeyDown={handleBarcodeScan}
+                            style={{
+                                width: '100%',
+                                padding: '12px 15px',
+                                borderRadius: '8px',
+                                border: '2px solid #0d2a4d', // Mantenemos el rojo pero más sutil
+                                backgroundColor: '#fffcfc',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                outline: 'none'
+                            }}
+                        />
+                    </div>
                 </div>
 
                 <div className="table-container-fixed">
@@ -187,7 +221,10 @@ export default function DespachoPage() {
                         </thead>
                         <tbody>
                             {products
-                                .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                                .filter(p =>
+                                    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    (p.barcode && p.barcode.includes(searchTerm)) // También filtra por lo que escribas en el buscador principal
+                                )
                                 .map(p => (
                                     <tr key={p.id}>
                                         <td className="font-bold">{p.name}</td>

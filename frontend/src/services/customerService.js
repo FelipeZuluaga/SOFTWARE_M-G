@@ -41,5 +41,11 @@ export const customerService = {
         } catch (error) {
             throw error;
         }
+    },
+    deleteCustomer: async (id) => {
+        return await api.delete(`/customers/${id}`);
+    },
+    updateCustomer: async (id, data) => {
+        return await api.put(`/customers/${id}`, data);
     }
 };

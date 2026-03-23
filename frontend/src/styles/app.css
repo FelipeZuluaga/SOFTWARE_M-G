@@ -1,24 +1,17 @@
 :root {
-    /* Paleta de Colores Corporativa */
-    --primary-color: #9b111e;      /* Rojo Gallego */
-    --primary-hover: #7a0d18;
-    --accent-color: #ffda79;       /* Dorado de resalte */
+    /* Paleta de Colores Corporativa (Actualizada) */
+    --primary-color: #0d2a4d;      /* Azul muy oscuro (Cuerpo del escudo) */
+    --primary-hover: #1a4a82;      /* Azul un poco más claro para hover */
+    --accent-color: #3b82f6;       /* Azul vibrante (Detalles del logo) */
     --white: #ffffff;
-    --bg-gray: #f8f9fa;            /* Gris claro para el fondo de la app */
+    --bg-gray: #f4f7f9;           /* Gris azulado muy suave para el fondo */
     
     /* Colores de Texto */
-    --text-dark: #2d3436;          /* Títulos y textos importantes */
-    --text-light: #636e72;         /* Subtítulos y descripciones */
-    --text-muted: #dfe6e9;
+    --text-dark: #0f172a;          
+    --text-light: #475569;         
+    --text-muted: #cbd5e1;
 
-    /* Sistema de Formas y Sombras */
-    --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.08);
-    --radius-lg: 20px;             /* Para tarjetas y contenedores grandes */
-    --radius-md: 10px;             /* Para botones, inputs y menús */
-    
-    /* Tipografía */
-    --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05); /* Sombra más sutil */
+    /* ... mantén tus otras variables igual ... */
 }
 /* ESTILOS GLOBALES */
 .admin-container {

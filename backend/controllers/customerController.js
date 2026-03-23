@@ -182,10 +182,33 @@ const getAllCustomersWithSellerName = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-
+const deleteCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.query("DELETE FROM customers WHERE id = ?", [id]);
+        res.json({ success: true, message: "Cliente eliminado" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+const updateCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, address, phone, visit_day } = req.body;
+        await db.query(
+            "UPDATE customers SET name=?, address=?, phone=?, visit_day=? WHERE id=?",
+            [name.toUpperCase(), address, phone, visit_day, id]
+        );
+        res.json({ success: true, message: "Cliente actualizado" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 // No olvides exportarla al final del archivo
 module.exports = {
     getCustomersWithBalance,
     createCustomer,
     getAllCustomersWithSellerName, // <--- Nueva función
+    deleteCustomer, 
+    updateCustomer,
 };

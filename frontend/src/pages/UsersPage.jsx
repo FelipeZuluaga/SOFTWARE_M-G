@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Trash2, UserPlus, ShieldCheck } from "lucide-react";
 import { userService } from "../services/userService";
-import { alertSuccess, alertError, alertConfirm } from "../services/alertService";
+import { alertSuccess, alertError, alertConfirmUsers } from "../services/alertService";
 import "../styles/users.css"; // Nuevo archivo
 
 const ROLES = ["ADMINISTRADOR", "DESPACHADOR", "SOCIO", "NO_SOCIO"];
@@ -36,7 +36,7 @@ function UsersPage() {
     };
 
     const handleDelete = async (id) => {
-        const confirmed = await alertConfirm("¿Eliminar usuario?", "Esta acción no se puede deshacer.");
+        const confirmed = await alertConfirmUsers("¿Eliminar usuario?", "Esta acción no se puede deshacer.");
         if (confirmed) {
             try {
                 await userService.delete(id);

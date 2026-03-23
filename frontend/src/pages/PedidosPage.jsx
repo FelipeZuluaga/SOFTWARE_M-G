@@ -408,7 +408,7 @@ export default function PedidosPage() {
                                 {user?.role === 'ADMINISTRADOR' && (
                                     <th>Tipo Cliente</th>
                                 )}
-                            
+
                                 <th style={{ textAlign: 'right' }}>Total</th>
                                 <th style={{ textAlign: 'center' }}>Estado</th>
                                 <th style={{ textAlign: 'center' }}>Gestión</th>
@@ -440,13 +440,25 @@ export default function PedidosPage() {
                                         <button className="btn-edit" onClick={() => handleViewDetail(o)} title="Ver Detalle">
                                             <Eye size={14} />
                                         </button>
-                                        {canManage && (
+                                        {/* Verificamos que tenga permisos Y que el pedido NO esté liquidado */}
+                                        {canManage && o.status?.toUpperCase() !== 'LIQUIDADO' && (
                                             <>
-                                                <button className="btn-edit" style={{ background: '#f59e0b', color: 'white' }} onClick={() => handleOpenEdit(o)} title="Editar Pedido">
+                                                <button
+                                                    className="btn-edit"
+                                                    style={{ background: '#f59e0b', color: 'white' }}
+                                                    onClick={() => handleOpenEdit(o)}
+                                                    title="Editar Pedido"
+                                                >
                                                     <Edit3 size={14} />
                                                 </button>
+
                                                 {user?.role === 'ADMINISTRADOR' && (
-                                                    <button className="btn-edit" style={{ background: '#ef4444', color: 'white' }} onClick={() => handleDeleteOrder(o)} title="Eliminar">
+                                                    <button
+                                                        className="btn-edit"
+                                                        style={{ background: '#ef4444', color: 'white' }}
+                                                        onClick={() => handleDeleteOrder(o)}
+                                                        title="Eliminar"
+                                                    >
                                                         <Trash2 size={14} />
                                                     </button>
                                                 )}

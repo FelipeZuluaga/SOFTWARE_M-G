@@ -1,5 +1,5 @@
 import Swal from 'sweetalert2';
-const BRAND_COLOR = '#9b111e'; // El rojo borgoña de tu logo
+const BRAND_COLOR = '#0d2a4d'; // El rojo borgoña de tu logo
 export const alertSuccess = (title, text) => {
   return Swal.fire({
     icon: 'success',
@@ -40,4 +40,19 @@ export const alertConfirm = (title, text) => {
     reverseButtons: true
   });
 };
+export const alertConfirmUsers = async (title, text) => {
+  const result = await Swal.fire({
+    title,
+    text,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: BRAND_COLOR,
+    cancelButtonColor: '#636e72',
+    confirmButtonText: 'Sí, finalizar',
+    cancelButtonText: 'Cancelar',
+    reverseButtons: true
+  });
 
+  // Retornamos estrictamente el booleano isConfirmed
+  return result.isConfirmed; 
+};

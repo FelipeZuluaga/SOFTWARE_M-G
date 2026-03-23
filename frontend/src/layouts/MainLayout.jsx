@@ -1,6 +1,6 @@
 import { useNavigate, NavLink } from "react-router-dom";
 import * as Lucide from 'lucide-react';
-import logo from "../assets/logo.jpeg";
+import logo from "../assets/logo.png";
 import Footer from "../components/footer";
 import "../styles/mainLayout.css";
 
@@ -16,7 +16,7 @@ function MainLayout({ children }) {
 
     const menuOptions = [
         { to: "/dashboard", label: "Inicio", icon: <Lucide.LayoutDashboard size={18} />, roles: ["ADMINISTRADOR", "DESPACHADOR", "SOCIO", "NO_SOCIO"] },
-
+        { to: "/ventas", label: "Rutas", icon: <Lucide.Navigation size={18} />, roles: ["ADMINISTRADOR"] },
 
         { to: "/liquidaciones", label: "Devoluciones", icon: <Lucide.AArrowUpIcon size={18} />, roles: ["ADMINISTRADOR", "DESPACHADOR", "SOCIO", "NO_SOCIO"] },
 
@@ -29,7 +29,7 @@ function MainLayout({ children }) {
         { to: "/historial-ventas", label: "Informe de rutas - ventas", icon: <Lucide.BarChart3 size={18} />, roles: ["ADMINISTRADOR"] },
         { to: "/clientes", label: "Informe de clientes", icon: <Lucide.BarChart3 size={18} />, roles: ["ADMINISTRADOR"] },
         //DESPACHADOR
-        { to: "/despacho", label: "Crear Ruta", icon: <Lucide.ClipboardList size={18} />, roles: ["DESPACHADOR"] },
+        { to: "/despacho", label: "Despachos", icon: <Lucide.ClipboardList size={18} />, roles: ["ADMINISTRADOR", "DESPACHADOR"] },
         { to: "/pedidos", label: "Informe de rutas cargadas", icon: <Lucide.Truck size={18} />, roles: ["DESPACHADOR"] },
         //SOCIO Y NO SOCIO
         { to: "/ventas", label: "Mis Rutas Cargadas", icon: <Lucide.Navigation size={18} />, roles: ["SOCIO", "NO_SOCIO"] },
