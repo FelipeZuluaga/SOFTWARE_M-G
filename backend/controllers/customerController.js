@@ -27,7 +27,7 @@ const getCustomersWithBalance = async (req, res) => {
             FROM customers
             WHERE seller_id = ?
         `;
-        
+
         const params = [seller_id];
 
         // 3. Si viene el día, lo agregamos al filtro dinámicamente
@@ -154,7 +154,7 @@ const getAllCustomersWithSellerName = async (req, res) => {
             LEFT JOIN users u ON c.seller_id = u.id
             WHERE 1=1
         `;
-        
+
         const params = [];
 
         // Filtros opcionales
@@ -194,13 +194,45 @@ const deleteCustomer = async (req, res) => {
 const updateCustomer = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, address, phone, visit_day } = req.body;
-        await db.query(
-            "UPDATE customers SET name=?, address=?, phone=?, visit_day=? WHERE id=?",
-            [name.toUpperCase(), address, phone, visit_day, id]
-        );
-        res.json({ success: true, message: "Cliente actualizado" });
+        const {
+            customer_name,
+            customer_address,
+            phone,
+            visit_day,
+            seller_id,
+            position,
+            visit_status_c,
+            total_debt // 1. Agregamos el campo que viene del frontend
+        } = req.body;
+
+        const query = `
+            UPDATE customers 
+            SET name = ?, 
+                address = ?, 
+                phone = ?, 
+                visit_day = ?, 
+                seller_id = ?, 
+                position = ?, 
+                visit_status_c = ?,
+                total_debt = ? -- 2. Lo añadimos al SET
+            WHERE id = ?
+        `;
+
+        await db.query(query, [
+            customer_name.toUpperCase(),
+            customer_address.toUpperCase(),
+            phone || "",
+            visit_day,
+            seller_id,
+            position || 0,
+            visit_status_c || 'PENDIENTE',
+            total_debt || 0, // 3. Pasamos el valor (asegurando un 0 si viene vacío)
+            id
+        ]);
+
+        res.json({ success: true, message: "Cliente actualizado con éxito" });
     } catch (error) {
+        console.error("Error al actualizar:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -209,6 +241,6 @@ module.exports = {
     getCustomersWithBalance,
     createCustomer,
     getAllCustomersWithSellerName, // <--- Nueva función
-    deleteCustomer, 
+    deleteCustomer,
     updateCustomer,
 };
