@@ -109,6 +109,7 @@ export const orderService = {
             throw error.response?.data?.message || "Error al procesar la devolución de productos";
         }
     },
+
     // Dentro de orderService.js
     getReturnHistory: async (orderId) => {
         try {
@@ -118,6 +119,9 @@ export const orderService = {
             throw error.response?.data?.message || "Error al obtener historial";
         }
     },
+
+
+    
     /**
      * NUEVO - INVENTARIO ACTUAL EN CAMIÓN: 
      * Calcula: (Cantidad Despachada) - (Cantidad Vendida en Sales).

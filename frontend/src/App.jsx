@@ -9,11 +9,15 @@ import DespachoPage from "./pages/DespachoPage.jsx";
 import PedidosPage from "./pages/PedidosPage.jsx";
 import VentasPage from "./pages/VentasPage.jsx";
 import VentasHistoryPage from "./pages/VentasHistoryPage.jsx";
+import CustomerList from "./components/CustomerList.jsx";
+
+
 import DevolucionesPage from "./pages/DevolucionesPage.jsx";
-import LiquidacionesListPage from "./pages/LiquidacionesListPage.jsx";
+import HistDevolucionesPage from "./pages/HistDevolucionesPage.jsx";
+
+
 import VentasDetalleReadOnly from "./components/VentasDetalleReadOnly.jsx";
 import SettlementModule from "./components/SettlementModule.jsx";
-import CustomerList from "./components/CustomerList.jsx";
 
 export default function AppRouter() {
   return (
@@ -97,11 +101,11 @@ export default function AppRouter() {
           }
         />
         <Route
-          path="/liquidaciones"
+          path="/historial-devoluciones"
           element={
             <RoleRoute allowedRoles={["ADMINISTRADOR", "SOCIO"]}>
               <MainLayout>
-                <LiquidacionesListPage />
+                <HistDevolucionesPage />
               </MainLayout>
             </RoleRoute>
           }

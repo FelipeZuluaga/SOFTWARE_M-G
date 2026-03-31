@@ -13,14 +13,14 @@ export default function DevolucionesPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(true);
     const [procesando, setProcesando] = useState(false);
-    
+
     // NUEVO: Estado para saber si la liquidación ya está cerrada
     const [esLiquidado, setEsLiquidado] = useState(false);
-    
+
     const barcodeBuffer = useRef("");
 
     useEffect(() => {
-        if (!orderId) { navigate("/liquidaciones"); return; }
+        if (!orderId) { navigate("/historial-devoluciones"); return; }
         const inicializarPagina = async () => {
             setLoading(true);
             try {
@@ -47,16 +47,16 @@ export default function DevolucionesPage() {
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (esLiquidado) return; // NO permitir escaneo si ya se liquidó
-            
+
             if (document.activeElement.tagName === "INPUT" && document.activeElement.type === "text") return;
 
             if (e.key === "Enter") {
                 const code = barcodeBuffer.current;
                 if (code) {
-                    setItemsDevolver(prev => prev.map(item => 
-                        item.codg_barras === code 
-                        ? { ...item, cantidad_a_devolver: item.cantidad_a_devolver + 1 }
-                        : item
+                    setItemsDevolver(prev => prev.map(item =>
+                        item.codg_barras === code
+                            ? { ...item, cantidad_a_devolver: item.cantidad_a_devolver + 1 }
+                            : item
                     ));
                 }
                 barcodeBuffer.current = "";
@@ -72,25 +72,49 @@ export default function DevolucionesPage() {
     }, [esLiquidado]); // Escuchar cambios en esLiquidado
 
     const handleCantidadChange = (id, valor) => {
-        if (esLiquidado) return; // Bloqueo de seguridad adicional
-        setItemsDevolver(prev => prev.map(item =>
-            item.product_id === id ? { ...item, cantidad_a_devolver: Number(valor) || 0 } : item
-        ));
+        if (esLiquidado) return;
+        const numValor = Number(valor) || 0;
+        setItemsDevolver(prev => prev.map(item => {
+            if (item.product_id === id) {
+                // Validar que no devuelva más de lo que lleva
+                const cantidadValidada = numValor > item.despachado ? item.despachado : numValor;
+                return { ...item, cantidad_a_devolver: cantidadValidada };
+            }
+            return item;
+        }));
     };
 
     const handleLiquidacion = async () => {
         if (esLiquidado) return;
         setProcesando(true);
+
         try {
+            // 1. Filtramos solo los productos que el cliente realmente está devolviendo (TRAE > 0)
+            const devolucionesParaEnviar = itemsDevolver
+                .filter(item => item.cantidad_a_devolver > 0)
+                .map(item => ({
+                    order_id: orderId,
+                    product_id: item.product_id,
+                    quantity: item.cantidad_a_devolver
+                }));
+
+            // 2. Si hay algo que devolver, llamamos al servicio (debes crear esta función en orderService)
+            if (devolucionesParaEnviar.length > 0) {
+                await orderService.saveReturns(devolucionesParaEnviar);
+            }
+
+            // 3. Proceder a la liquidación final
             navigate(`/liquidacion-ruta/${orderId}`, { state: { totalSurtido: totalSuma } });
+
         } catch (error) {
-            alertError("Error", "No se pudo procesar la liquidación");
+            console.error(error);
+            alertError("Error", "No se pudo procesar la devolución en la base de datos");
         } finally {
             setProcesando(false);
         }
     };
 
-    const itemsFiltrados = itemsDevolver.filter(item => 
+    const itemsFiltrados = itemsDevolver.filter(item =>
         item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.codg_barras.includes(searchTerm)
     );
@@ -110,8 +134,8 @@ export default function DevolucionesPage() {
             </div>
 
             <div className="search-container" style={{ marginBottom: '20px' }}>
-                <input 
-                    type="text" 
+                <input
+                    type="text"
                     placeholder={esLiquidado ? "Lectura bloqueada: Orden Liquidada" : "Buscar por nombre o código de barras..."}
                     className="input-search"
                     value={searchTerm}
@@ -144,11 +168,11 @@ export default function DevolucionesPage() {
                                     <td>{item.product_name}</td>
                                     <td className="text-center">{item.despachado}</td>
                                     <td>
-                                        <input 
-                                            type="number" 
-                                            className="input-minimal" 
+                                        <input
+                                            type="number"
+                                            className="input-minimal"
                                             value={item.cantidad_a_devolver}
-                                            onChange={(e) => handleCantidadChange(item.product_id, e.target.value)} 
+                                            onChange={(e) => handleCantidadChange(item.product_id, e.target.value)}
                                             disabled={esLiquidado} // Bloqueo de inputs de tabla
                                             style={{ backgroundColor: esLiquidado ? 'transparent' : '#fff', border: esLiquidado ? 'none' : '1px solid #ccc' }}
                                         />
@@ -169,9 +193,9 @@ export default function DevolucionesPage() {
                 </table>
 
                 <div className="footer-actions">
-                    <button 
-                        className="btn-liquidar" 
-                        onClick={handleLiquidacion} 
+                    <button
+                        className="btn-liquidar"
+                        onClick={handleLiquidacion}
                         disabled={procesando || esLiquidado} // Bloqueo de botón final
                         style={{ backgroundColor: esLiquidado ? '#6c757d' : '' }}
                     >

@@ -677,7 +677,7 @@ export default function VentasPage() {
             localStorage.removeItem(`planilla_${selectedOrder.id}`);
 
             // REDIRIGIR A DEVOLUCIONES PASANDO LOS SOBRANTES
-            navigate("/liquidaciones", {
+            navigate("/historial-devoluciones", {
                 state: {
                     orderId: selectedOrder.id,
                     sobrantes: productosSobrantes

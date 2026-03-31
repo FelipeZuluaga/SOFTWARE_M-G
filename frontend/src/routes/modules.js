@@ -9,7 +9,7 @@ export const modulesByRole = {
         { title: "Rutas", path: "/ventas", iconName: "LayoutDashboard" },
         { title: "Informe de rutas - ventas", path: "/historial-ventas", iconName: "BarChart3" },
 
-        { title: "Informe y proceso de Devolucion", path: "/liquidaciones", iconName: "RotateCcw" },
+        { title: "Informe y proceso de Devolucion", path: "/historial-devoluciones", iconName: "RotateCcw" },
         { title: "Pagos", path: "/pagos", iconName: "Wallet" },
 
         { title: "Informe de Clientes", path: "/clientes", iconName: "BarChart3" }
@@ -17,18 +17,18 @@ export const modulesByRole = {
     DESPACHADOR: [
         { title: "Crear pedido", path: "/despacho", iconName: "Truck" },
         { title: "Detalle mis pedidos", path: "/pedidos", iconName: "ClipboardList" },
-        { title: "Informe y proceso de Devolucion", path: "/liquidaciones", iconName: "RotateCcw" },
+        { title: "Informe y proceso de Devolucion", path: "/historial-devoluciones", iconName: "RotateCcw" },
     ],
     SOCIO: [
         { title: "Mis Rutas Cargadas", path: "/ventas", iconName: "Navigation" },
         { title: "Informe de mis rutas", path: "/historial-ventas", iconName: "TrendingUp" },
-        { title: "Informe y proceso de Devolucion", path: "/liquidaciones", iconName: "RotateCcw" },
+        { title: "Informe y proceso de Devolucion", path: "/historial-devoluciones", iconName: "RotateCcw" },
         { title: "Mis clientes", path: "", iconName: "BarChart3" }
     ],
     NO_SOCIO: [
         { title: "Mis Rutas Cargadas", path: "/ventas", iconName: "Navigation" },
         { title: "Informe de mis rutas", path: "/historial-ventas", iconName: "TrendingUp" },
-        { title: "Informe y proceso de Devolucion", path: "/liquidaciones", iconName: "RotateCcw" },
+        { title: "Informe y proceso de Devolucion", path: "/historial-devoluciones", iconName: "RotateCcw" },
         { title: "Mis clientes", path: "", iconName: "BarChart3" }
     ]
 };

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { orderService } from "../services/orderService";
 
-export default function LiquidacionesListPage() {
+export default function HistDevolucionesPage() {
     const [ordenes, setOrdenes] = useState([]);
     // --- NUEVOS ESTADOS PARA FILTROS ---
     const [filtroId, setFiltroId] = useState("");

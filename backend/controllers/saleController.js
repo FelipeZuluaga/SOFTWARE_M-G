@@ -85,7 +85,7 @@ const createSale = async (req, res) => {
         }
 
         // 4. FINALIZAR ORDEN
-        await connection.query("UPDATE orders SET status = 'LIQUIDADO' WHERE id = ?", [order_id]);
+        await connection.query("UPDATE orders SET status = 'EN RUTA' WHERE id = ?", [order_id]);
 
         await connection.commit();
         res.status(201).json({ success: true, message: "Liquidación completada exitosamente" });

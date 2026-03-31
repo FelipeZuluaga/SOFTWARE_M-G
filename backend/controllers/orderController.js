@@ -249,7 +249,7 @@ const updateOrderItems = async (req, res) => {
         if (connection) connection.release();
     }
 };
-// backend/controllers/orderController.js
+
 
 const processReturn = async (req, res) => {
     const { order_id, items } = req.body;
@@ -284,12 +284,12 @@ const processReturn = async (req, res) => {
 
         // 3. Marcar la orden como LIQUIDADA
         await connection.query(
-            "UPDATE orders SET status = 'LIQUIDADO' WHERE id = ?",
+            "UPDATE orders SET status = 'DEVOLUCION' WHERE id = ?",
             [order_id]
         );
 
         await connection.commit();
-        res.json({ success: true, message: "Liquidación guardada con éxito." });
+        res.json({ success: true, message: "La devoluciòn fue correctamente." });
     } catch (error) {
         if (connection) await connection.rollback();
         console.error("Error en SQL:", error);
@@ -298,6 +298,12 @@ const processReturn = async (req, res) => {
         if (connection) connection.release();
     }
 };
+
+
+
+
+
+
 // 2. NUEVA FUNCIÓN: Obtener lo que se devolvió de una orden
 const getReturnHistory = async (req, res) => {
     const { orderId } = req.params;
